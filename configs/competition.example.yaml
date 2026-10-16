@@ -1,0 +1,26 @@
+# Copy to competition.yaml AFTER receiving the official brief.
+data: data/raw/train.csv
+target: REPLACE_TARGET
+task: classification  # classification or regression
+positive_label: 1     # binary only; match the label's real type
+seed: 42
+features: []          # explicit allowlist required; no ID, future info or target derivatives
+categorical: []       # include integer-coded categories here too
+id_column: null
+split:
+  strategy: time     # choose from time / group / random to match deployment
+  time_column: REPLACE_TIMESTAMP
+  # group_column: customer_id  # for group strategy
+  gap_periods: 0     # distinct timestamp gap; account separately for target lookahead
+  validation_size: 0.2
+  holdout_size: 0.2
+model:
+  iterations: 700
+  depth: 6
+  learning_rate: 0.05
+  thread_count: 4
+  early_stopping_rounds: 60
+# Optional binary threshold tuning on validation only. Units must come from the brief.
+# costs:
+#   false_positive: 1
+#   false_negative: 10

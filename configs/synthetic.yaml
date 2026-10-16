@@ -1,0 +1,25 @@
+# A practice dataset only. Replace all fields after reading the actual brief.
+data: data/synthetic/train.csv
+target: target
+task: classification
+positive_label: 1
+seed: 42
+# Explicit allowlist: only features available at the moment of the decision.
+features: [signal_a, signal_b, segment, amount]
+categorical: [segment]
+id_column: row_id
+split:
+  strategy: group
+  group_column: customer_id
+  validation_size: 0.2
+  holdout_size: 0.2
+model:
+  iterations: 300
+  depth: 6
+  learning_rate: 0.06
+  thread_count: 4
+  early_stopping_rounds: 40
+# Cost is in arbitrary practice units, not ForteBank financial data.
+costs:
+  false_positive: 1.0
+  false_negative: 8.0

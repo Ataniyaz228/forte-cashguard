@@ -1,0 +1,2 @@
+experiment_id,hypothesis,development_split,change,metric,baseline,result,artifact,decision,notes
+E001,[fill before running],[fixed split],[one change],[official metric],,,,,
