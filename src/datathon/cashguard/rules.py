@@ -4,6 +4,7 @@ Every threshold below was chosen on the training videos (see docs/EXPERIMENTS.cs
 kept in one place (TH) so it can be re-tuned without touching the logic.
 """
 
+import os
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -405,8 +406,9 @@ def rule_client_id(f: Features) -> list[Candidate]:
 
 # rule_client_id is kept but not active: the 2B VLM answers "ID shown" for any object in
 # the cashier's hands (cash, phone), so the ID-before-cash order is not observable (E011).
-ALL_RULES = [rule_stranger, rule_departures, rule_safe_open_seated, rule_periodic, rule_client_flow,
-             rule_cash_bag]
+ALL_RULES = ([rule_client_id] if os.environ.get("CASHGUARD_CLIENT_ID_RULE") == "1" else []) + [
+    rule_stranger, rule_departures, rule_safe_open_seated, rule_periodic, rule_client_flow,
+    rule_cash_bag]
 
 
 def run_rules(f: Features) -> list[Candidate]:

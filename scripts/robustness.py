@@ -13,6 +13,7 @@ copy is loaded on the GPU.
 
 import csv
 import json
+import os
 import subprocess
 import sys
 import time
@@ -22,7 +23,7 @@ import httpx
 
 from datathon.cashguard.config import settings
 
-BASE = "http://127.0.0.1:8090"
+BASE = os.environ.get("CASHGUARD_BASE", "http://127.0.0.1:8090")
 
 V = Path("data/raw/open/videos")
 OUT = Path(".build/robust")
