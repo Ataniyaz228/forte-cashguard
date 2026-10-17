@@ -20,3 +20,13 @@ reports/readiness.json
 *.cbm
 *.joblib
 catboost_info/
+/open.zip
+
+# derived from competition data, keep local
+data/annotations/
+
+# local tools / editor locks / organizer documents
+.serena/
+*.~lock*
+.~lock*
+*.docx

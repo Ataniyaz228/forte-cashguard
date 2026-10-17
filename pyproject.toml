@@ -4,13 +4,48 @@ version = "0.1.0"
 description = "Offline-first datathon preparation and reproducible tabular baseline"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-  "catboost>=1.2.8,<2", "duckdb>=1.3,<2", "ipykernel>=6.29,<8",
-  "joblib>=1.4,<2", "jupyterlab>=4.4,<5", "matplotlib>=3.10,<4",
-  "numpy>=2,<3", "openpyxl>=3.1,<4", "optuna>=4,<5", "pandas>=2.2,<3",
-  "plotly>=6,<7", "polars>=1.30,<2", "pyarrow>=20,<30", "python-dotenv>=1,<2",
-  "pyyaml>=6,<7", "rich>=14,<15", "scikit-learn>=1.6,<2", "seaborn>=0.13,<1",
-  "streamlit>=1.45,<2", "httpx>=0.28,<1",
+  "catboost>=1.2.8,<2",
+  "duckdb>=1.3,<2",
+  "ipykernel>=6.29,<8",
+  "joblib>=1.4,<2",
+  "jupyterlab>=4.4,<5",
+  "matplotlib>=3.10,<4",
+  "numpy>=2,<3",
+  "openpyxl>=3.1,<4",
+  "optuna>=4,<5",
+  "pandas>=2.2,<3",
+  "plotly>=6,<7",
+  "polars>=1.30,<2",
+  "pyarrow>=20,<30",
+  "python-dotenv>=1,<2",
+  "pyyaml>=6,<7",
+  "rich>=14,<15",
+  "scikit-learn>=1.6,<2",
+  "seaborn>=0.13,<1",
+  "streamlit>=1.45,<2",
+  "httpx>=0.28,<1",
+  # cash-discipline video service
+  "torch>=2.6",
+  "torchvision>=0.21",
+  "transformers>=4.50,<5",
+  "fastapi>=0.115",
+  "uvicorn>=0.30",
+  "python-multipart>=0.0.9",
+  "av>=12",
+  "opencv-python-headless>=4.10",
+  "pillow>=10",
+  "bitsandbytes>=0.45",
+  "accelerate>=1.0",
 ]
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu128" }
+torchvision = { index = "pytorch-cu128" }
 
 [dependency-groups]
 dev = ["pytest>=8,<10", "ruff>=0.11,<1"]

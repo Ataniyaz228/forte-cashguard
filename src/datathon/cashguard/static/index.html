@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CashGuard — проверка кассовой дисциплины</title>
+<style>
+  :root { --bg:#f5f6f8; --card:#fff; --ink:#1d2330; --muted:#667085; --line:#e3e6eb;
+          --ok:#127a3a; --okbg:#e7f6ec; --bad:#b42318; --badbg:#fdecea; --acc:#1f5eff; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+         background:var(--bg); color:var(--ink); }
+  header { background:#111827; color:#fff; padding:14px 24px; }
+  header h1 { margin:0; font-size:18px; font-weight:600; }
+  header p { margin:2px 0 0; color:#c7cbd3; font-size:13px; }
+  main { max-width:1180px; margin:0 auto; padding:20px 16px 48px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:18px; margin-bottom:16px; }
+  .drop { border:2px dashed #b9c0cc; border-radius:10px; padding:28px; text-align:center; cursor:pointer; }
+  .drop.over { border-color:var(--acc); background:#eef3ff; }
+  .drop input { display:none; }
+  button { background:var(--acc); color:#fff; border:0; border-radius:8px; padding:9px 16px; font-size:15px; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:default; }
+  .row { display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start; }
+  .col-video { flex:1 1 360px; max-width:420px; }
+  .col-res { flex:2 1 480px; min-width:0; }
+  video { width:100%; border-radius:8px; background:#000; max-height:70vh; }
+  .status { color:var(--muted); margin-top:10px; min-height:1.4em; }
+  .bar { height:6px; background:var(--line); border-radius:3px; overflow:hidden; margin-top:8px; }
+  .bar > div { height:100%; width:30%; background:var(--acc); animation:slide 1.2s infinite ease-in-out; }
+  @keyframes slide { 0%{margin-left:-30%} 100%{margin-left:100%} }
+  .verdict { padding:14px 16px; border-radius:8px; font-weight:600; font-size:17px; }
+  .verdict.ok { background:var(--okbg); color:var(--ok); }
+  .verdict.bad { background:var(--badbg); color:var(--bad); }
+  .note { color:var(--muted); font-size:13px; margin-top:6px; }
+  .viol { border:1px solid var(--line); border-radius:8px; padding:14px; margin-top:12px; }
+  .viol h3 { margin:0 0 6px; font-size:16px; }
+  .tc { display:inline-block; background:#eef3ff; color:var(--acc); border-radius:6px; padding:2px 8px;
+        font-variant-numeric:tabular-nums; cursor:pointer; font-weight:600; margin-right:6px; }
+  .frames { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .frames figure { margin:0; }
+  .frames img { height:180px; border-radius:6px; border:1px solid var(--line); cursor:zoom-in; }
+  .frames figcaption { font-size:12px; color:var(--muted); text-align:center; }
+  .rule { margin-top:8px; font-size:13px; background:#f8f9fb; border-left:3px solid #98a2b3; padding:6px 10px; }
+  .err { color:var(--bad); }
+  dialog { border:0; padding:0; background:transparent; }
+  dialog img { max-width:92vw; max-height:92vh; border-radius:8px; }
+  dialog::backdrop { background:rgba(0,0,0,.75); }
+</style>
+</head>
+<body>
+<header>
+  <h1>CashGuard — проверка видеозаписей кассы</h1>
+  <p>Локальный анализ видимых действий. Результат — подсказка для проверяющего, а не юридическое заключение.</p>
+</header>
+<main>
+  <div class="card">
+    <label class="drop" id="drop">
+      <input type="file" id="file" accept=".mov,video/quicktime,video/*">
+      <div><b>Перетащите видео (.mov) сюда</b> или нажмите, чтобы выбрать файл</div>
+      <div class="note" id="fname"></div>
+    </label>
+    <div style="margin-top:12px"><button id="go" disabled>Проверить видео</button></div>
+    <div class="status" id="status"></div>
+    <div class="bar" id="bar" hidden><div></div></div>
+  </div>
+  <div class="row" id="out" hidden>
+    <div class="col-video card"><video id="player" controls muted playsinline></video>
+      <div class="note">Нажмите на таймкод, чтобы перейти к моменту события.</div></div>
+    <div class="col-res card" id="result"></div>
+  </div>
+</main>
+<dialog id="zoom"><img id="zoomimg" alt=""></dialog>
+<script>
+const $ = id => document.getElementById(id);
+let file = null, timer = null;
+const drop = $("drop");
+drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over"); });
+drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("over");
+  if (e.dataTransfer.files.length) pick(e.dataTransfer.files[0]); });
+$("file").addEventListener("change", e => e.target.files.length && pick(e.target.files[0]));
+function pick(f) { file = f; $("fname").textContent = `${f.name} · ${(f.size/1048576).toFixed(1)} МБ`;
+  $("go").disabled = false; }
+function fmt(t) { const m = Math.floor(t/60), s = (t - m*60).toFixed(1).padStart(4, "0");
+  return `${m}:${s}`; }
+function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function setStatus(msg, busy, cls) { $("status").innerHTML = cls ? `<span class="${cls}">${esc(msg)}</span>` : esc(msg);
+  $("bar").hidden = !busy; }
+$("go").addEventListener("click", async () => {
+  if (!file) return;
+  $("go").disabled = true; clearInterval(timer);
+  $("out").hidden = false; $("result").innerHTML = "";
+  $("player").src = URL.createObjectURL(file);
+  setStatus("Загрузка видео…", true);
+  const fd = new FormData(); fd.append("file", file);
+  try {
+    const r = await fetch("/ui/analyze", { method: "POST", body: fd });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.detail || r.statusText);
+    poll(j.job_id, Date.now());
+  } catch (e) { setStatus("Ошибка загрузки: " + e.message, false, "err"); $("go").disabled = false; }
+});
+function poll(id, t0) {
+  timer = setInterval(async () => {
+    try {
+      const r = await fetch("/ui/jobs/" + id); const j = await r.json();
+      const sec = Math.round((Date.now() - t0) / 1000);
+      if (j.status === "processing") {
+        const q = j.queue_position > 0 ? ` · в очереди перед вами: ${j.queue_position}` : "";
+        setStatus(`Идёт анализ… ${sec} с${q}`, true); return;
+      }
+      clearInterval(timer); $("go").disabled = false;
+      if (j.status === "failed") { setStatus("Не удалось обработать видео: " + j.error, false, "err"); return; }
+      setStatus(`Готово за ${j.processing_time_sec ?? sec} с · задача ${j.job_id}`, false);
+      render(j);
+    } catch (e) { setStatus("Нет связи с сервером, повторяю…", true); }
+  }, 1500);
+}
+function render(j) {
+  const v = j.violations || [];
+  let h = v.length
+    ? `<div class="verdict bad">Обнаружены признаки возможных нарушений: ${v.length}</div>`
+    : `<div class="verdict ok">Нарушение не обнаружено</div>`;
+  if (j.summary) h += `<div class="note">${esc(j.summary)}</div>`;
+  v.forEach((x, i) => {
+    const frames = (x.evidence_frames || []).map(f =>
+      `<figure><img src="data:image/jpeg;base64,${f.image_base64}" data-t="${f.timestamp_sec}" alt="кадр ${fmt(f.timestamp_sec)}">
+       <figcaption>${fmt(f.timestamp_sec)}</figcaption></figure>`).join("");
+    const rule = x.rule ? `<div class="rule"><b>Основание:</b> ${esc(x.rule.title)}${x.rule.clause ? ", " + esc(x.rule.clause) : ""}.
+       ${x.rule.text ? "<br>" + esc(x.rule.text) : ""}</div>` : "";
+    h += `<div class="viol"><h3>${i + 1}. ${esc(x.type)}</h3>
+      <span class="tc" data-t="${x.timecode_sec}">${fmt(x.timecode_sec)}</span>
+      <span class="note">${x.confidence != null ? "уверенность " + Math.round(x.confidence * 100) + "%" : ""}</span>
+      <p style="margin:8px 0 0">${esc(x.description)}</p>${rule}<div class="frames">${frames}</div></div>`;
+  });
+  $("result").innerHTML = h;
+  $("result").querySelectorAll(".tc").forEach(el => el.addEventListener("click", () => seek(+el.dataset.t)));
+  $("result").querySelectorAll(".frames img").forEach(el => el.addEventListener("click", () => {
+    $("zoomimg").src = el.src; $("zoom").showModal(); seek(+el.dataset.t); }));
+}
+function seek(t) { const p = $("player"); p.currentTime = Math.max(0, t - 1); p.play().catch(() => {}); }
+$("zoom").addEventListener("click", () => $("zoom").close());
+</script>
+</body>
+</html>

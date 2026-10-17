@@ -1,0 +1,9 @@
+# Separate tunnel for the datathon service; the existing "zerde" tunnel is untouched.
+tunnel: e935897a-71c2-4412-9abe-03c355d25003
+credentials-file: /home/zynqq/.cloudflared/e935897a-71c2-4412-9abe-03c355d25003.json
+ingress:
+  - hostname: cashguard.zerde.site
+    service: http://127.0.0.1:8090
+    originRequest:
+      connectTimeout: 30s
+  - service: http_status:404
