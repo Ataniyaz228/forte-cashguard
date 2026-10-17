@@ -21,6 +21,7 @@ PROBES = {
     "cash": "Are banknotes or stacks of cash lying on the desk?",
     "safe_open": "Is the door of this metal safe open?",
     "key_in_lock": "Is a key inserted in this lock?",
+    "door_open": "Is the door of this room standing open?",
     "id_card": "Is someone holding or showing an ID card or an identity document?",
     "cash_in_hands": "Is someone holding banknotes in their hands or passing money across "
                      "the desk?",

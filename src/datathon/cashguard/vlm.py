@@ -4,13 +4,21 @@ Instead of free text we read P(yes) from the next-token logits: one forward pass
 (image, question) pair, batched, and a calibrated score we can threshold on dev data.
 """
 
-from dataclasses import dataclass
+import os
+from dataclasses import dataclass, field
 
 import numpy as np
 import torch
 from PIL import Image
 
-VLM_MODEL = "Qwen/Qwen3-VL-2B-Instruct"
+VLM_MODEL = os.environ.get("CASHGUARD_VLM_MODEL", "Qwen/Qwen3-VL-2B-Instruct")
+VLM_4BIT = os.environ.get("CASHGUARD_VLM_4BIT", "0") == "1"
+
+
+def model_tag() -> str:
+    """Short id of the configured VLM, used to keep per-model caches apart."""
+    name = VLM_MODEL.split("/")[-1].replace("Qwen3-VL-", "").replace("-Instruct", "")
+    return name.lower() + ("-4bit" if VLM_4BIT else "")
 
 QUESTIONS: dict[str, str] = {
     "safe_open": "Look at the grey metal safe (a cabinet with a lockable door). "
@@ -37,7 +45,7 @@ class VLMConfig:
     model: str = VLM_MODEL
     max_pixels: int = 320 * 600
     batch: int = 12
-    load_4bit: bool = False  # needed for Qwen3-VL-4B on a 6 GB GPU
+    load_4bit: bool = field(default_factory=lambda: VLM_4BIT)
 
 
 class SceneVLM:
@@ -62,7 +70,8 @@ class SceneVLM:
             self.model = AutoModelForImageTextToText.from_pretrained(
                 self.cfg.model, quantization_config=q, dtype=dtype, device_map={"": 0})
         else:
-            self.model = AutoModelForImageTextToText.from_pretrained(self.cfg.model, dtype=dtype)
+            self.model = AutoModelForImageTextToText.from_pretrained(
+                self.cfg.model, dtype=dtype, attn_implementation="sdpa")
             self.model.to(device)
         self.model.eval()
         tok = self.proc.tokenizer

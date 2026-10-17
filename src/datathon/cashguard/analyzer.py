@@ -1,6 +1,7 @@
 """Full local pipeline: video -> signals -> rules -> jury JSON with evidence frames."""
 
 import logging
+import os
 import threading
 import time
 from pathlib import Path
@@ -23,7 +24,9 @@ from .vlm import PERIODIC_KEYS, SceneVLM, VLMConfig
 log = logging.getLogger("cashguard.analyzer")
 DET_FPS = 3.0
 VLM_FPS = 0.5
-VLM_FPS_LONG = 0.4  # videos longer than 90 s: keeps the 5-minute budget with a queue
+# videos longer than 90 s: 0.4 keeps the 5-minute budget on a small GPU with a queue;
+# set 0.5 on a big GPU so live runs match the validated setting
+VLM_FPS_LONG = float(os.environ.get("CASHGUARD_VLM_FPS_LONG", "0.4"))
 
 class Analyzer:
     def __init__(self, cfg: Settings):

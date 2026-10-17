@@ -262,7 +262,8 @@ def rule_client_flow(f: Features) -> list[Candidate]:
             continue
         prev = [t for t in exits if t < ti]
         if f.probe is not None:
-            pc = f.probe("cash", [ti, round(ti + 1.5, 2)])
+            pc = f.probe("cash", [round(max(0.0, ti - 1.0), 2), ti, round(ti + 1.5, 2),
+                                  round(min(f.duration - 0.1, ti + 3.0), 2)])
         else:
             pc = f.vwin("cash_on_desk", ti - 1.0, ti + 3.0)
         if pc >= TH["cash_next"]:
@@ -288,7 +289,10 @@ def rule_cash_bag(f: Features) -> list[Candidate]:
         if f.probe_series is not None:  # denser targeted check of the whole visit
             ts = [round(t, 2) for t in np.arange(max(0.0, tb - 4), t_end, 1.0)]
             if ts:
-                pid = max(pid, max(f.probe_series(["id_card"], ts)["id_card"]))
+                # an ID must be seen on at least two frames (single-frame confusions with
+                # the bag or a card in hand, Х-17)
+                vals = sorted(f.probe_series(["id_card"], ts)["id_card"], reverse=True)
+                pid = vals[1] if len(vals) > 1 else 0.0
         if pid < TH["id_shown"]:
             t = max(tb, t_end - 2.0) if leaves else tb + 3.0
             out.append(Candidate("no_courier_check", round(t, 2), 1.0 - pid, [tb, t],
@@ -302,12 +306,17 @@ def rule_cash_bag(f: Features) -> list[Candidate]:
     last_cash = after[-1]
     safe_after = np.where((f.v("safe_open") >= TH["safe_open"]) &
                           (f.vlm_t > f.vlm_t[after[0]]))[0]
+    # evidence of a recount: time spent counting OR handling the cash on the desk (a VLM
+    # often misses "counting", but a real recount keeps the cash on the desk for long:
+    # Х-14 ~50 s vs Х-13 ~4 s before the safe)
+    period = 1.0 / max(_vlm_fps(f), 1e-6)
     counting = (f.v("counting") >= TH["counting"]) & (f.vlm_t >= tb)
-    n_count = int(counting.sum())
-    if n_count * (1.0 / max(_vlm_fps(f), 1e-6)) < TH["recount_min_sec"]:
+    handled = cash & (f.vlm_t >= tb)
+    work_sec = max(int(counting.sum()), int(handled.sum())) * period
+    if work_sec < TH["recount_min_sec"]:
         t = float(f.vlm_t[safe_after[0]]) if len(safe_after) else float(f.vlm_t[last_cash])
         out.append(Candidate("no_recount", t, 0.7, [float(f.vlm_t[after[0]]), t],
-                             {"t_bag": tb, "count_sec": n_count / max(_vlm_fps(f), 1e-6)}))
+                             {"t_bag": tb, "count_sec": round(work_sec, 1)}))
     return out
 
 

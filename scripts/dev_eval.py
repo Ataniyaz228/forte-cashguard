@@ -42,14 +42,17 @@ def main():
         vlm = SceneVLM(cfg=VLMConfig(max_pixels=464 * 848, batch=6))
     res = []
     for v, a in ann.items():
-        vdir = "vlm_roi" if args.roi else "vlm"
+        from datathon.cashguard.vlm import model_tag
+
+        sfx = "" if model_tag() == "2b" else "_" + model_tag()
+        vdir = ("vlm_roi" if args.roi else "vlm") + sfx
         if v in SKIP or not Path(f".build/cache/{vdir}/{v}.json").exists():
             continue
         f = from_cache(v, vlm_dir=vdir)
         if vlm is not None or args.probe_cache_only:
             from datathon.cashguard.verify import Verifier
 
-            pdir = "probe_roi" if args.roi else "probe"
+            pdir = ("probe_roi" if args.roi else "probe") + sfx
             ver = Verifier(vlm, Path(f"data/raw/open/videos/{v}.mov"),
                            Path(f".build/cache/{pdir}/{v}.json"), roi=f.roi)
             f.probe, f.probe_series = ver, ver.series

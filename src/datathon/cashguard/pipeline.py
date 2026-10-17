@@ -1,5 +1,6 @@
 """Analysis entry point: video -> verdict + violations in the jury JSON schema."""
 
+import queue
 from pathlib import Path
 
 from .config import Settings
@@ -20,9 +21,27 @@ def stub_analyze(path: Path) -> dict:
     }
 
 
+class AnalyzerPool:
+    """N independent model copies; each job takes a free one (parallel videos on a big GPU)."""
+
+    def __init__(self, analyzers: list):
+        self.free: queue.Queue = queue.Queue()
+        for a in analyzers:
+            self.free.put(a)
+
+    def __call__(self, path: Path, progress=None) -> dict:
+        a = self.free.get()
+        try:
+            return a(path, progress=progress)
+        finally:
+            self.free.put(a)
+
+
 def build_analyzer(cfg: Settings):
     if cfg.pipeline == "stub":
         return stub_analyze
     from .analyzer import Analyzer
 
-    return Analyzer(cfg)
+    if cfg.workers <= 1:
+        return Analyzer(cfg)
+    return AnalyzerPool([Analyzer(cfg) for _ in range(cfg.workers)])
