@@ -12,6 +12,7 @@ from .config import Settings
 from .detect import Detector, pick_device
 from .features import Features
 from .report import render
+from .roi import action_roi, apply_roi
 from .rules import run_rules
 from .screen import screen_series
 from .timeline import build_timeline
@@ -67,18 +68,27 @@ class Analyzer:
             flush()
         if not det_t:
             raise ValueError("не удалось декодировать кадры видео")
-        P = self.vlm.yes_prob_shared(vlm_imgs, PERIODIC_KEYS)
+        # automatic zoom: people + laptop over the video + the safe found by grounding
+        ver = Verifier(self.vlm, path)
+        mid = vlm_t[len(vlm_t) // 2]
+        safe = ver.safe_box(mid)
+        roi = action_roi(dets, h, w, [safe] if safe else None)
+        P = self.vlm.yes_prob_shared([apply_roi(im, roi) for im in vlm_imgs], PERIODIC_KEYS)
         tl = build_timeline(det_t, dets, h, w, DET_FPS)
-        return Features(path.stem, info.duration_sec or det_t[-1], w, h, DET_FPS,
-                        np.asarray(det_t, float), dets, tl,
-                        np.array([np.nan if x is None else x for x in scr], dtype=float),
-                        np.asarray(vlm_t, float), {k: P[:, j] for j, k in enumerate(PERIODIC_KEYS)})
+        f = Features(path.stem, info.duration_sec or det_t[-1], w, h, DET_FPS,
+                     np.asarray(det_t, float), dets, tl,
+                     np.array([np.nan if x is None else x for x in scr], dtype=float),
+                     np.asarray(vlm_t, float),
+                     {k: P[:, j] for j, k in enumerate(PERIODIC_KEYS)})
+        f.roi = roi
+        ver.roi = roi
+        f.probe, f.probe_series = ver, ver.series
+        return f
 
     def __call__(self, path: Path) -> dict:
         with self.lock:
             t0 = time.time()
             f = self.scan(path)
-            f.probe = Verifier(self.vlm, path)
             t1 = time.time()
             cands = run_rules(f)
             out = render(path, f, cands)

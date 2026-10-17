@@ -30,6 +30,7 @@ def main():
     ap.add_argument("--verbose", action="store_true")
     ap.add_argument("--json", type=Path)
     ap.add_argument("--probe", action="store_true", help="run/caches 2nd-stage VLM checks")
+    ap.add_argument("--roi", action="store_true", help="auto-zoom caches (vlm_roi/probe_roi)")
     ap.add_argument("--probe-cache-only", action="store_true",
                     help="use cached 2nd-stage checks only (no GPU)")
     args = ap.parse_args()
@@ -41,14 +42,17 @@ def main():
         vlm = SceneVLM(cfg=VLMConfig(max_pixels=464 * 848, batch=6))
     res = []
     for v, a in ann.items():
-        if v in SKIP or not Path(f".build/cache/vlm/{v}.json").exists():
+        vdir = "vlm_roi" if args.roi else "vlm"
+        if v in SKIP or not Path(f".build/cache/{vdir}/{v}.json").exists():
             continue
-        f = from_cache(v)
+        f = from_cache(v, vlm_dir=vdir)
         if vlm is not None or args.probe_cache_only:
             from datathon.cashguard.verify import Verifier
 
-            f.probe = Verifier(vlm, Path(f"data/raw/open/videos/{v}.mov"),
-                               Path(f".build/cache/probe/{v}.json"))
+            pdir = "probe_roi" if args.roi else "probe"
+            ver = Verifier(vlm, Path(f"data/raw/open/videos/{v}.mov"),
+                           Path(f".build/cache/{pdir}/{v}.json"), roi=f.roi)
+            f.probe, f.probe_series = ver, ver.series
         cands = run_rules(f)
         pred = bool(cands)
         gt = a["label"] == "violation"

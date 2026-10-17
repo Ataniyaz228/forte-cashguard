@@ -10,6 +10,7 @@ from pathlib import Path
 
 from PIL import Image
 
+from .roi import apply_roi
 from .video import frames_at
 from .vlm import SceneVLM
 
@@ -20,6 +21,9 @@ PROBES = {
     "cash": "Are banknotes or stacks of cash lying on the desk?",
     "safe_open": "Is the door of this metal safe open?",
     "key_in_lock": "Is a key inserted in this lock?",
+    "id_card": "Is someone holding or showing an ID card or an identity document?",
+    "cash_in_hands": "Is someone holding banknotes in their hands or passing money across "
+                     "the desk?",
 }
 CROP = {"safe_open": "safe", "key_in_lock": "lock"}
 GROUND_Q = ('Locate the grey metal safe (cabinet) in the image and output its bbox '
@@ -63,9 +67,11 @@ def _lock(img: Image.Image, b, lock=None) -> Image.Image:
 
 
 class Verifier:
-    def __init__(self, vlm: SceneVLM, path: Path, cache_file: Path | None = None):
+    def __init__(self, vlm: SceneVLM, path: Path, cache_file: Path | None = None,
+                 roi=None):
         self.vlm = vlm
         self.path = path
+        self.roi = roi  # full-frame questions see the auto-zoomed action region
         self.cache_file = cache_file
         self.cache: dict = {}
         if cache_file and cache_file.exists():
@@ -113,6 +119,23 @@ class Verifier:
         self._save()
         return lock
 
+    def series(self, names: list[str], times: list[float]) -> dict[str, list[float]]:
+        """Several full-frame questions on each time (image encoded once per frame)."""
+        times = [round(t, 2) for t in times]
+        if self.vlm is None:
+            return {n: [self.cache.get(f"{n}@{t}", self._nearest_cached(n, t))
+                        for t in times] for n in names}
+        todo = [t for t in times if any(f"{n}@{t}" not in self.cache for n in names)]
+        if todo:
+            frames = frames_at(self.path, todo)
+            P = self.vlm.yes_prob_shared([apply_roi(frames[t], self.roi) for t in todo],
+                                         [PROBES[n] for n in names])
+            for i, t in enumerate(todo):
+                for j, n in enumerate(names):
+                    self.cache[f"{n}@{t}"] = round(float(P[i, j]), 4)
+            self._save()
+        return {n: [self.cache[f"{n}@{t}"] for t in times] for n in names}
+
     def _nearest_cached(self, name: str, t: float, tol: float = 0.8) -> float:
         best, val = tol, 0.0
         for k, v in self.cache.items():
@@ -133,7 +156,9 @@ class Verifier:
             for t in todo:
                 img = frames[t]
                 kind = CROP.get(name)
-                if kind:
+                if not kind:
+                    img = apply_roi(img, self.roi)
+                else:
                     box = self.safe_box(t)
                     if box is None:
                         self.cache[f"{name}@{t}"] = 0.0

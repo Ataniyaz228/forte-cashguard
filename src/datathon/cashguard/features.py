@@ -25,6 +25,9 @@ class Features:
     vlm: dict[str, np.ndarray]
     # second-stage targeted check: probe(name, times) -> max P(yes); None = unavailable
     probe: Callable[[str, list[float]], float] | None = None
+    # several questions per frame over time: series(names, times) -> {name: [P per time]}
+    probe_series: Callable[[list[str], list[float]], dict] | None = None
+    roi: tuple | None = None  # automatic zoom region used for VLM questions
 
     # ---- helpers used by rules ----
     def v(self, key: str) -> np.ndarray:
@@ -50,10 +53,10 @@ class Features:
         return out
 
 
-def from_cache(video: str, root: Path = Path(".build/cache")) -> Features:
+def from_cache(video: str, root: Path = Path(".build/cache"), vlm_dir: str = "vlm") -> Features:
     d = json.loads((root / "det" / f"{video}.json").read_text())
     s = json.loads((root / "screen" / f"{video}.json").read_text())
-    v = json.loads((root / "vlm" / f"{video}.json").read_text())
+    v = json.loads((root / vlm_dir / f"{video}.json").read_text())
     tl = build_timeline(d["t"], d["dets"], d["height"], d["width"], d["fps"])
     n = len(d["t"])
     scr = np.array([np.nan if x is None else x for x in s["screen"]][:n] +
@@ -62,6 +65,8 @@ def from_cache(video: str, root: Path = Path(".build/cache")) -> Features:
     from .vlm import PERIODIC_KEYS  # same questions as a live run
 
     vlm = {k: P[:, j] for j, k in enumerate(v["keys"]) if k in PERIODIC_KEYS}
-    return Features(video, d["duration"], d["width"], d["height"], d["fps"],
-                    np.asarray(d["t"], float), d["dets"], tl, scr,
-                    np.asarray(v["t"], float), vlm)
+    f = Features(video, d["duration"], d["width"], d["height"], d["fps"],
+                 np.asarray(d["t"], float), d["dets"], tl, scr,
+                 np.asarray(v["t"], float), vlm)
+    f.roi = tuple(v["roi"]) if v.get("roi") else None
+    return f

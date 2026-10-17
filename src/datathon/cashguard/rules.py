@@ -20,7 +20,10 @@ TH = {
     "periodic": 0.6,          # personal items / food / phone
     "periodic_min_hits": 2,
     "cash_next": 0.6,
-    "entry_min_t": 5.0,         # cash on desk when the next visitor enters
+    "entry_min_t": 5.0,
+    "client_window": 18.0,     # seconds after a client enters that are checked for ID/cash
+    "client_cash": 0.6,
+    "client_id": 0.5,         # cash on desk when the next visitor enters
     "count_after_client": 0.5,
     "id_shown": 0.3,
     "counting": 0.5,
@@ -146,7 +149,9 @@ def rule_departures(f: Features) -> list[Candidate]:
                                  {"t_exit": d.t_exit, "while": "left"}))
         elif f.probe is not None:
             key_t = sorted({round(min(d.t_exit + k * 0.7, last), 2) for k in (1, 2, 3, 4)})
-            p_key = f.probe("key_in_lock", key_t)
+            # a key must be seen on at least two frames (single dark-frame spikes, Х-12)
+            vals = sorted((f.probe("key_in_lock", [t]) for t in key_t), reverse=True)
+            p_key = vals[1] if len(vals) > 1 else 0.0
             if p_key >= TH["key_in_lock"]:
                 out.append(Candidate("key_in_safe", d.t_depart, p_key, ev,
                                      {"t_exit": d.t_exit}))
@@ -274,6 +279,10 @@ def rule_cash_bag(f: Features) -> list[Candidate]:
                   if e.kind == "count_down" and tb < e.t <= tb + 20]
         t_end = leaves[0] if leaves else min(f.duration, tb + 15)
         pid = f.vwin("id_shown", tb - 2, t_end)
+        if f.probe_series is not None:  # denser targeted check of the whole visit
+            ts = [round(t, 2) for t in np.arange(max(0.0, tb - 4), t_end, 1.0)]
+            if ts:
+                pid = max(pid, max(f.probe_series(["id_card"], ts)["id_card"]))
         if pid < TH["id_shown"]:
             t = max(tb, t_end - 2.0) if leaves else tb + 3.0
             out.append(Candidate("no_courier_check", round(t, 2), 1.0 - pid, [tb, t],
@@ -348,6 +357,39 @@ def rule_stranger(f: Features) -> list[Candidate]:
     return out
 
 
+def rule_client_id(f: Features) -> list[Candidate]:
+    """Client visit: money reaches the cashier before any ID document is seen (п. 19)."""
+    if f.probe_series is None:
+        return []
+    out = []
+    for e in f.timeline.events:
+        if e.kind != "count_up" or e.before != 1:
+            continue
+        # a courier with a cash bag is a different procedure (rule_cash_bag)
+        if f.vwin("bag_on_desk", e.t, e.t + 10) >= TH["bag"]:
+            continue
+        t1 = min(f.duration - 0.1, e.t + TH["client_window"])
+        ts = [round(e.t + k, 2) for k in range(int(t1 - e.t) + 1)]
+        if len(ts) < 6:
+            continue
+        s = f.probe_series(["id_card", "cash_in_hands"], ts)
+        idp, cash = np.asarray(s["id_card"]), np.asarray(s["cash_in_hands"])
+        hit_cash = np.where(cash >= TH["client_cash"])[0]
+        if not len(hit_cash):
+            continue
+        k = int(hit_cash[0])
+        if idp[:k + 1].max(initial=0.0) < TH["client_id"]:
+            t = ts[k]
+            later = np.where(idp >= TH["client_id"])[0]
+            out.append(Candidate("no_client_id_check", t, float(cash[k]),
+                                 [t, ts[min(k + 2, len(ts) - 1)]],
+                                 {"t_enter": e.t,
+                                  "t_id": ts[int(later[0])] if len(later) else None}))
+    return out
+
+
+# rule_client_id is kept but not active: the 2B VLM answers "ID shown" for any object in
+# the cashier's hands (cash, phone), so the ID-before-cash order is not observable (E011).
 ALL_RULES = [rule_stranger, rule_departures, rule_safe_open_seated, rule_periodic, rule_client_flow,
              rule_cash_bag]
 
