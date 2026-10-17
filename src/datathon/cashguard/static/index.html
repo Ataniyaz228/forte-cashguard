@@ -299,7 +299,7 @@ body{background:#fff}
 .btn-white:disabled{background:rgba(255,255,255,.55);color:rgba(110,13,55,.6);box-shadow:none;cursor:default}
 .p-main .fine{color:rgba(255,255,255,.72);margin-top:14px;position:relative;z-index:1}
 .p-art{background:linear-gradient(180deg,#fff,#fbeff4);border:1px solid var(--line);display:flex;align-items:flex-end;justify-content:flex-end;min-height:440px}
-.p-art img.safe{position:absolute;right:0;bottom:0;height:88%;max-width:92%;object-fit:contain;object-position:right bottom;mix-blend-mode:multiply}
+.p-art img.safe{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:right bottom;mix-blend-mode:multiply}
 @keyframes float{50%{transform:translateY(-10px) rotate(-1.5deg)}}
 .toast{position:absolute;display:flex;gap:10px;align-items:center;background:#fff;border-radius:16px;padding:10px 14px 10px 10px;box-shadow:0 14px 30px -12px rgba(74,2,33,.35);font-size:13px;font-weight:600;max-width:260px;animation:pop2 .6s cubic-bezier(.2,1.4,.4,1) both}
 .toast i{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;flex:none;font-style:normal}
@@ -327,7 +327,7 @@ body{background:#fff}
 .ht.dark{background:linear-gradient(160deg,#4a0221,#7a0f3e);color:#fff}
 .ht.dark p{color:rgba(255,255,255,.75)}.ht.dark .k{color:#ffc2da}
 .regb{padding:56px 0 64px}
-.sky{position:relative;border-radius:32px;overflow:hidden;min-height:300px;display:flex;align-items:flex-end;background:#2b7fbf url("/static/brand/sky.webp") center/cover no-repeat;margin-bottom:64px}
+.sky{position:relative;border-radius:32px;overflow:hidden;min-height:300px;display:flex;align-items:flex-end;margin-top:56px;background:#2b7fbf url("/static/brand/sky.webp") center/cover no-repeat;margin-bottom:64px}
 .sky::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(74,2,33,.88),rgba(74,2,33,.45) 55%,transparent)}
 .sky .in{position:relative;padding:40px;color:#fff;max-width:620px}
 .sky img{height:30px;margin-bottom:18px}
@@ -360,6 +360,31 @@ body{background:#fff}
   .sky .in{padding:26px 20px}
   .verdict .vart{width:150px;right:-40px;bottom:-50px;opacity:.5}
 }
+
+/* how-it-works mini product mockups */
+.mock{margin:auto 0 22px;background:#fff;border-radius:18px;padding:14px;box-shadow:0 10px 24px -14px rgba(74,2,33,.35);font-size:12.5px;display:flex;flex-direction:column;gap:9px;min-height:120px;justify-content:center}
+.ht .mock{margin-top:18px}
+.mk-row{display:flex;justify-content:space-between;gap:8px;align-items:center;color:var(--ink-2)}
+.mk-row b{font-weight:800;color:var(--ink)}
+.mk-dim{color:var(--muted);font-size:11.5px}
+.mk-track{position:relative;height:12px;border-radius:99px;background:var(--line)}
+.mk-track i{position:absolute;top:0;bottom:0;border-radius:99px;background:#e7a3c0}
+.mk-track em{position:absolute;top:-6px;bottom:-6px;width:3px;border-radius:3px;background:var(--brand);transform:translateX(-1px)}
+.mk-q{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:7px 10px;border-radius:11px;background:var(--bg)}
+.mk-q b{font:700 11.5px/1 var(--mono);color:var(--muted)}
+.mk-q b.yes{color:var(--brand)}
+.mk-zoom{flex-direction:row;align-items:center;justify-content:space-between}
+.mk-frame{position:relative;width:76px;height:96px;border-radius:12px;background:linear-gradient(160deg,#e9e6e6,#d9d3d5)}
+.mk-frame::before{content:"";position:absolute;right:10px;top:16px;width:26px;height:30px;border-radius:5px;background:#a9a3a6}
+.mk-box{position:absolute;right:7px;top:13px;width:32px;height:36px;border:2px solid var(--accent);border-radius:6px}
+.mk-arrow{font-size:20px;color:var(--brand);font-weight:800}
+.mk-lens{flex:1;max-width:120px;aspect-ratio:1;border-radius:50%;border:3px solid var(--brand);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:radial-gradient(circle,#fff,#fbeff4)}
+.mk-lens span{color:var(--muted);font-size:11.5px}
+.mk-lens b{font:700 11.5px/1 var(--mono);color:var(--brand)}
+.ht.dark .mock{background:rgba(255,255,255,.1);box-shadow:none;border:1px solid rgba(255,255,255,.18)}
+.ht.dark .mk-row,.ht.dark .mk-row b{color:#fff}
+.ht.dark .mk-dim{color:rgba(255,255,255,.7)}
+.mk-cite{border-left:3px solid #ffc2da;padding:4px 8px;color:#fff;font-weight:700}
 </style>
 </head>
 <body>
@@ -371,7 +396,7 @@ body{background:#fff}
       <span class="div"></span>
       <span><b>CashGuard</b><small>видеоконтроль кассы · Datathon ’26</small></span>
     </a>
-    <nav><a href="#how">Как работает</a><a href="#checks">Что проверяем</a></nav>
+    <nav><a href="#how">Как работает</a></nav>
     <div class="sp"></div>
     <div class="status"><i></i><span>Модели работают локально</span></div>
   </div>
@@ -417,18 +442,17 @@ body{background:#fff}
     <h2 class="sec">От записи до отчёта — четыре шага</h2>
     <p class="sub">Все модели выполняются на нашем сервере. Ни видео, ни кадры, ни описания не передаются во внешние сервисы.</p>
     <div class="howgrid">
-      <div class="ht"><span class="k">ШАГ 1</span><h4>Люди и перемещения</h4><p>Детектор находит людей, отсеивает отражения за стеклом, фиксирует приход и уход.</p><div class="art bleed"><img src="/static/brand/coins.webp" alt="" style="mix-blend-mode:multiply"></div></div>
-      <div class="ht"><span class="k">ШАГ 2</span><h4>Состояние сцены</h4><p>Визуально-языковая модель смотрит на сейф, стол, ценности и сумку инкассации.</p><div class="art"><img src="/static/brand/magnifier.webp" alt=""></div></div>
-      <div class="ht"><span class="k">ШАГ 3</span><h4>Точечные проверки</h4><p>В ключевые моменты — увеличенные фрагменты: замок сейфа, стол после ухода.</p><div class="art"><img src="/static/brand/percent.webp" alt=""></div></div>
-      <div class="ht dark"><span class="k">ШАГ 4</span><h4>Отчёт с основанием</h4><p>Таймкод, кадры, что видно и почему это важно, пункт правил НБРК.</p><div class="art"><img src="/static/brand/chat.webp" alt=""></div></div>
+      <div class="ht"><span class="k">ШАГ 1</span><h4>Люди и перемещения</h4><p>Детектор находит людей, отсеивает отражения за стеклом, фиксирует приход и уход.</p>
+        <div class="mock"><div class="mk-row"><span>людей в кадре</span><b>2 → 1 → 0</b></div>
+          <div class="mk-track"><i style="left:0;width:38%;opacity:1"></i><i style="left:38%;width:34%;opacity:.55"></i><em style="left:72%"></em></div>
+          <div class="mk-row mk-dim"><span>0:00</span><span>уход кассира 0:11.5</span></div></div></div>
+      <div class="ht"><span class="k">ШАГ 2</span><h4>Состояние сцены</h4><p>Визуально-языковая модель отвечает «да/нет» про сейф, стол, ценности и сумку инкассации.</p>
+        <div class="mock"><div class="mk-q"><span>Сейф открыт?</span><b class="yes">да · 0,98</b></div><div class="mk-q"><span>Наличные на столе?</span><b class="yes">да · 0,91</b></div><div class="mk-q"><span>Сумка инкассации?</span><b>нет · 0,02</b></div></div></div>
+      <div class="ht"><span class="k">ШАГ 3</span><h4>Точечные проверки</h4><p>В ключевые моменты — увеличенные фрагменты: замок сейфа, стол после ухода.</p>
+        <div class="mock mk-zoom"><div class="mk-frame"><div class="mk-box"></div></div><div class="mk-arrow">→</div><div class="mk-lens"><span>замок</span><b>ключ · 0,99</b></div></div></div>
+      <div class="ht dark"><span class="k">ШАГ 4</span><h4>Отчёт с основанием</h4><p>Таймкод, кадры, что видно и почему это важно, пункт правил НБРК.</p>
+        <div class="mock mk-report"><div class="mk-row"><b>Ключ оставлен в замке сейфа</b></div><div class="mk-row mk-dim"><span>▶ 0:15.0</span><span>уверенность 78%</span></div><div class="mk-cite">НБРК № 231, п. 80</div></div></div>
     </div>
-  </div>
-
-  <div class="wrap regb" id="checks">
-    <div class="eyebrow">Что проверяем</div>
-    <h2 class="sec">Типы нарушений и нормативные основания</h2>
-    <p class="sub">Тексты норм сверены с ИПС «Әділет». Сервис сообщает только о том, что видно на записи: проводки, сверки и подлинность купюр по видео не оцениваются.</p>
-    <div class="reg-grid" id="reg"></div>
   </div>
 
   <div class="wrap">
@@ -523,8 +547,6 @@ let file = null, timer = null, started = 0, R = null, lb = [], lbI = 0;
 /* 5. register */
 fetch("/ui/types").then(r => r.json()).then(list => {
   $("nTypes").textContent = list.length;
-  $("reg").innerHTML = list.map(t => `<div class="card rc"><div class="top"><div class="ic">${icon(t.code, 22)}</div><h4>${esc(t.name)}</h4></div>
-    <p>${esc(cap(t.why))}.</p><div class="chips">${t.rules.map(r => `<span class="chip">${esc(short(r.title))}, ${esc(r.clause)}</span>`).join("")}</div></div>`).join("");
 }).catch(() => {});
 
 /* 3. file pick */
