@@ -22,13 +22,20 @@ PROBES = {
     "safe_open": "Is the door of this metal safe open?",
     "key_in_lock": "Is a key inserted in this lock?",
     "door_open": "Is the door of this room standing open?",
+    # same questions asked on a zoomed crop of the desk (robust to a farther camera)
+    "desk_left": "Is anything lying on the desk besides the laptop, the desk phone and the "
+                 "money counting machine (for example papers, a tablet, money, a bag or a "
+                 "drink)?",
+    "desk_cash": "Are banknotes or stacks of cash lying on the desk?",
     "id_card": "Is someone holding or showing an ID card or an identity document?",
     "cash_in_hands": "Is someone holding banknotes in their hands or passing money across "
                      "the desk?",
 }
-CROP = {"safe_open": "safe", "key_in_lock": "lock"}
+CROP = {"safe_open": "safe", "key_in_lock": "lock", "desk_left": "desk", "desk_cash": "desk"}
 GROUND_Q = ('Locate the grey metal safe (cabinet) in the image and output its bbox '
             'coordinates in JSON format as [{"bbox_2d": [x1, y1, x2, y2], "label": "safe"}].')
+DESK_Q = ('Locate the wooden desk (work table) in the image and output its bbox coordinates '
+          'in JSON format as [{"bbox_2d": [x1, y1, x2, y2], "label": "desk"}].')
 LOCK_Q = ('Locate the lock (keyhole) on the door of this safe and output its bbox coordinates '
           'in JSON format as [{"bbox_2d": [x1, y1, x2, y2], "label": "lock"}].')
 BOX_RE = re.compile(r"\[\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\]")
@@ -79,6 +86,7 @@ class Verifier:
             self.cache = json.loads(cache_file.read_text())
         self._safe_box = self.cache.get("_safe_box", "unset")
         self._lock_box = self.cache.get("_lock_box", "unset")
+        self._desk_box = self.cache.get("_desk_box", "unset")
 
     def _save(self):
         if self.cache_file:
@@ -94,6 +102,22 @@ class Verifier:
             box = None
         self._safe_box = box
         self.cache["_safe_box"] = box
+        self._save()
+        return box
+
+    def desk_box(self, t_hint: float):
+        """Desk found by grounding once per video; None if the 'desk' is most of the frame
+        (then the zoom would add nothing and the full-frame question is used)."""
+        if self._desk_box != "unset":
+            return self._desk_box
+        img = frames_at(self.path, [t_hint])[t_hint]
+        box = _rel_box(self.vlm.describe(img, DESK_Q, 80), *img.size)
+        if box is not None:
+            area = (box[2] - box[0]) * (box[3] - box[1]) / (img.width * img.height)
+            if area < 0.01 or area > 0.6:
+                box = None
+        self._desk_box = box
+        self.cache["_desk_box"] = box
         self._save()
         return box
 
@@ -159,6 +183,9 @@ class Verifier:
                 kind = CROP.get(name)
                 if not kind:
                     img = apply_roi(img, self.roi)
+                elif kind == "desk":
+                    box = self.desk_box(t)
+                    img = _crop(img, box, pad=0.12, size=640) if box else apply_roi(img, self.roi)
                 else:
                     box = self.safe_box(t)
                     if box is None:

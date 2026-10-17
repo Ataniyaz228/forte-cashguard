@@ -29,7 +29,8 @@ TH = {
     "id_shown": 0.3,
     "counting": 0.5,
     "bag": 0.8,
-    "desk_items": 0.3,         # targeted: anything left on the desk after the exit
+    "desk_items": 0.3,
+    "desk_crop": 0.8,          # zoomed desk: violations >=0.95 on all frames, normals <=0.62         # targeted: anything left on the desk after the exit
     "key_in_lock": 0.3,        # max over 4 post-exit lock crops (E005/E006: weak signal)
     "safe_seated_samples": 3,
     "safe_open_long": 15.0,    # or stays open until the video ends
@@ -136,12 +137,16 @@ def rule_departures(f: Features) -> list[Candidate]:
         items = [k for k in ("cash_on_desk", "bag_on_desk", "docs_on_desk")
                  if periodic[k] >= TH["valuables"]]
         if f.probe is not None:
-            p_desk = f.probe("desk_items", probe_t)
-            p_cash = f.probe("cash", probe_t)
+            # scene view OR a zoomed desk crop (robust to a farther camera); the crop is more
+            # sensitive, so it has its own threshold and needs two frames (E021)
+            p_scene = f.probe("desk_items", probe_t)
+            crop_vals = sorted((f.probe("desk_left", [t]) for t in probe_t), reverse=True)
+            p_crop = crop_vals[1] if len(crop_vals) > 1 else 0.0
+            p_cash = max(f.probe("cash", probe_t), f.probe("desk_cash", probe_t))
             if p_cash >= 0.5 and "cash_on_desk" not in items:
                 items.insert(0, "cash_on_desk")
-            left = p_desk >= TH["desk_items"]
-            score = p_desk
+            left = p_scene >= TH["desk_items"] or p_crop >= TH["desk_crop"]
+            score = max(p_scene, p_crop)
         else:
             left = bool(items)
             score = max([periodic[k] for k in items] or [0.0])
