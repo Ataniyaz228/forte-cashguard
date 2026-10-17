@@ -390,7 +390,6 @@ body{background:#fff}
 .upl .dz2 .only-desk{display:inline}
 @media (max-width:640px){
   .upl .dz2 .only-mob,.only-mob{display:inline}.upl .dz2 .only-desk,.only-desk{display:none}
-  .p-art{display:none!important}
   .page-hero{padding-block:12px 8px}
   .bento{gap:12px}
   .p-main h1{font-size:clamp(24px,7.4vw,31px);margin:14px 0 12px}
@@ -400,7 +399,9 @@ body{background:#fff}
   .p-art{min-height:250px;max-height:250px}
   .toast{font-size:12px;padding:8px 10px 8px 8px;border-radius:14px;max-width:210px}
   .toast i{width:28px;height:28px;border-radius:9px}
-  .toast.t1{top:14px;left:12px}.toast.t2{top:auto;bottom:62px;right:12px}.toast.t3{bottom:12px;left:12px}
+  .toast.t1{top:14px;left:12px}.toast.t2{top:auto;bottom:14px;right:12px}.toast.t3{display:none}
+  .p-art{min-height:220px;max-height:220px}
+  .p-art img.safe{object-position:60% 38%}
   .statrow{margin-top:12px}
   .sky{min-height:0;margin-top:28px;margin-bottom:28px;border-radius:24px;background-position:72% center}
   .sky::before{background:linear-gradient(180deg,rgba(74,2,33,.25),rgba(74,2,33,.92) 55%)}
@@ -424,6 +425,29 @@ body{background:#fff}
   .actions{flex-direction:column}
   .actions .btn{width:100%}
   footer .wrap{flex-direction:column;gap:10px}
+}
+
+/* 3D brand art in tiles */
+.stat2{position:relative;overflow:hidden;min-height:118px}
+.stat2 b,.stat2 span{position:relative;z-index:1;display:block;max-width:68%}
+.s3d{position:absolute;right:-8px;bottom:-10px;height:92px;width:auto;pointer-events:none;transition:transform .3s}
+.s3d-f{height:58px;right:14px;bottom:14px;border-radius:14px;box-shadow:0 10px 22px -10px rgba(74,2,33,.6)}
+.stat2:hover .s3d{transform:translateY(-4px) rotate(-3deg)}
+.pcard{position:relative;overflow:hidden}
+.pcard-art{position:absolute;right:-10px;top:-6px;height:130px;opacity:.95;pointer-events:none}
+.pcard > *:not(.pcard-art){position:relative}
+.clean{position:relative;overflow:hidden}
+.clean-art{position:absolute;right:-30px;bottom:-40px;height:170px;opacity:.9;mix-blend-mode:multiply;pointer-events:none}
+.clean > div{position:relative;max-width:78%}
+@media (max-width:640px){
+  .stat2{min-height:0;padding:16px 14px 16px 16px}
+  .stat2 b{max-width:100%;padding-right:46px;margin-bottom:6px}
+  .stat2 span{max-width:100%;font-size:13px;line-height:1.35}
+  .s3d{height:50px;right:6px;top:8px;bottom:auto}
+  .s3d-f{height:34px;right:12px;top:14px;bottom:auto;border-radius:9px}
+  .pcard-art{height:90px;right:-8px;top:-4px}
+  .clean-art{height:120px;opacity:.5}
+  .clean > div{max-width:100%}
 }
 </style>
 </head>
@@ -470,10 +494,10 @@ body{background:#fff}
       </div>
     </div>
     <div class="statrow">
-      <div class="stat2 reveal" style="animation-delay:.15s"><b>0 байт</b><span>видео уходит в облачные AI-сервисы</span></div>
-      <div class="stat2 reveal" style="animation-delay:.2s"><b id="nTypes">10</b><span>типов нарушений с пунктами норм РК</span></div>
-      <div class="stat2 reveal" style="animation-delay:.25s"><b>≤ 5 мин</b><span>на видео даже при пачке запросов</span></div>
-      <div class="stat2 reveal" style="animation-delay:.3s"><b>1–3</b><span>кадра-доказательства на событие</span></div>
+      <div class="stat2 reveal" style="animation-delay:.15s"><b>0 байт</b><span>видео уходит в облачные AI-сервисы</span><img class="s3d s3d-f" src="/static/brand/forte-app.svg" alt=""></div>
+      <div class="stat2 reveal" style="animation-delay:.2s"><b id="nTypes">10</b><span>типов нарушений с пунктами норм РК</span><img class="s3d" src="/static/brand/percent.webp" alt=""></div>
+      <div class="stat2 reveal" style="animation-delay:.25s"><b>≤ 5 мин</b><span>на видео даже при пачке запросов</span><img class="s3d" src="/static/brand/magnifier.webp" alt=""></div>
+      <div class="stat2 reveal" style="animation-delay:.3s"><b>1–3</b><span>кадра-доказательства на событие</span><img class="s3d" src="/static/brand/chat.webp" alt=""></div>
     </div>
   </div>
 
@@ -493,7 +517,7 @@ body{background:#fff}
   <div class="wrap proc">
     <div class="player"><video id="pv" muted playsinline loop></video><div class="scan"></div>
       <div class="badge"><i></i>Анализ записи</div><div class="tc-now tnum" id="pvClock">0:00.0</div></div>
-    <div class="card pcard">
+    <div class="card pcard"><img class="pcard-art" src="/static/brand/magnifier.webp" alt="">
       <div class="eyebrow">Проверка выполняется</div>
       <h2>Анализируем видео</h2>
       <div class="elapsed tnum" id="timer">Прошло 0 с</div>
@@ -639,7 +663,7 @@ function render(j) {
     <div class="kpis"><div class="kpi"><b class="tnum">${v.length}</b><span>${plural(v.length, "событие", "события", "событий")}</span></div>
     <div class="kpi"><b class="tnum">${fmt(dur)}</b><span>длительность</span></div><div class="kpi"><b class="tnum">${Math.round(j.processing_time_sec ?? 0)} с</b><span>анализ</span></div></div>`;
   $("events").innerHTML = bad ? v.map(eventCard).join("") :
-    `<div class="card clean"><div class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></div>
+    `<div class="card clean"><img class="clean-art" src="/static/brand/safe.webp" alt=""><div class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></div>
      <div><h3>Запись просмотрена целиком</h3><p>Люди, сейф, стол, ноутбук, приход и уход посетителей — событий для проверки нет. Отсутствие срабатывания не гарантирует отсутствие нарушений других типов.</p></div></div>`;
   $("durLbl").textContent = fmt(dur);
   const mon = $("rmon"); mon.querySelectorAll("img.still").forEach(e => e.remove()); $("rv").classList.toggle("hidden", !file);
