@@ -36,8 +36,13 @@ class Analyzer:
         log.info("models loaded on %s in %.1fs", self.device, time.time() - t0)
 
     # ---------------- signals ----------------
-    def scan(self, path: Path) -> Features:
+    def scan(self, path: Path, progress=None) -> Features:
+        def report(stage: str, frac: float):
+            if progress is not None:
+                progress(stage, round(min(1.0, max(0.0, frac)), 3))
+
         info = probe(path)
+        dur = max(info.duration_sec, 0.1)
         det_t, dets, scr = [], [], []
         vlm_t, vlm_imgs = [], []
         buf_t, buf_f = [], []
@@ -55,6 +60,8 @@ class Analyzer:
 
         h = w = 0
         for t, fr in sample_frames(path, DET_FPS):
+            if len(det_t) % 24 == 0:
+                report("people", t / dur)
             h, w = fr.shape[:2]
             buf_t.append(round(t, 3))
             buf_f.append(fr)
@@ -73,7 +80,9 @@ class Analyzer:
         mid = vlm_t[len(vlm_t) // 2]
         safe = ver.safe_box(mid)
         roi = action_roi(dets, h, w, [safe] if safe else None)
-        P = self.vlm.yes_prob_shared([apply_roi(im, roi) for im in vlm_imgs], PERIODIC_KEYS)
+        report("scene", 0.0)
+        P = self.vlm.yes_prob_shared([apply_roi(im, roi) for im in vlm_imgs], PERIODIC_KEYS,
+                                     on_frame=lambda i, n: report("scene", i / n))
         tl = build_timeline(det_t, dets, h, w, DET_FPS)
         f = Features(path.stem, info.duration_sec or det_t[-1], w, h, DET_FPS,
                      np.asarray(det_t, float), dets, tl,
@@ -85,12 +94,16 @@ class Analyzer:
         f.probe, f.probe_series = ver, ver.series
         return f
 
-    def __call__(self, path: Path) -> dict:
+    def __call__(self, path: Path, progress=None) -> dict:
         with self.lock:
             t0 = time.time()
-            f = self.scan(path)
+            f = self.scan(path, progress)
             t1 = time.time()
+            if progress is not None:
+                progress("checks", 0.0)
             cands = run_rules(f)
+            if progress is not None:
+                progress("report", 0.0)
             out = render(path, f, cands)
             log.info("%s: scan %.1fs, total %.1fs, %d events", path.name, t1 - t0,
                      time.time() - t0, len(cands))

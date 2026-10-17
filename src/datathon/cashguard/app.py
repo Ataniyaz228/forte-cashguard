@@ -6,6 +6,7 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from .config import Settings, settings
 from .jobs import JobStore
@@ -22,7 +23,8 @@ def public_view(job: dict, extended: bool = False) -> dict:
     if job["status"] == "failed":
         out["error"] = job.get("error", "")
     if extended:
-        for k in ("summary", "processing_time_sec", "video", "pipeline_version"):
+        for k in ("summary", "processing_time_sec", "video", "pipeline_version", "signals",
+                  "stage", "stage_progress"):
             if k in job:
                 out[k] = job[k]
         out["filename"] = job.get("_filename")
@@ -101,9 +103,20 @@ def create_app(cfg: Settings = settings, analyzer=None) -> FastAPI:
         out["queue_position"] = store.queue_position(job_id)
         return out
 
+    @app.get("/ui/types")
+    def ui_types():
+        from .norms import TYPES
+        from .rules import REPORTED_TYPES
+
+        return [{"code": c, "name": TYPES[c].name, "why": TYPES[c].why,
+                 "rules": [{"title": r.title, "clause": r.clause, "url": r.url}
+                           for r in TYPES[c].rules]} for c in REPORTED_TYPES]
+
     @app.get("/health")
     def health():
         return {"status": "ok"}
+
+    app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
     @app.get("/")
     def index():

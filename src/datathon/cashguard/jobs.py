@@ -1,5 +1,6 @@
 """In-process job queue. Uploaded videos are deleted right after analysis."""
 
+import inspect
 import json
 import logging
 import threading
@@ -68,7 +69,10 @@ class JobStore:
     def _run(self, job_id: str, video: Path) -> None:
         t0 = time.time()
         try:
-            result = self.analyzer(video)
+            if "progress" in inspect.signature(self.analyzer).parameters:
+                result = self.analyzer(video, progress=lambda st, fr: self._progress(job_id, st, fr))
+            else:
+                result = self.analyzer(video)
             update = {"status": "done", **result}
         except Exception as e:  # noqa: BLE001 - any analyzer failure -> job "failed"
             log.error("job %s failed: %s\n%s", job_id, e, traceback.format_exc())
@@ -81,6 +85,13 @@ class JobStore:
             job.update(update)
             self._save(job)
         log.info("job %s %s in %.1fs", job_id, job["status"], job["processing_time_sec"])
+
+    def _progress(self, job_id: str, stage: str, frac: float) -> None:
+        with self.lock:
+            job = self.jobs.get(job_id)
+            if job is not None:
+                job["stage"], job["stage_progress"] = stage, frac
+                job.setdefault("_started", time.time())
 
     def get(self, job_id: str) -> dict | None:
         with self.lock:

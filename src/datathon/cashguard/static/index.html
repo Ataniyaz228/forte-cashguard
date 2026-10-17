@@ -3,143 +3,512 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CashGuard — проверка кассовой дисциплины</title>
+<title>CashGuard — протокол видеоосмотра кассы</title>
+<link rel="stylesheet" href="/static/fonts/fonts.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23111'/%3E%3Ccircle cx='16' cy='16' r='7' fill='none' stroke='%23e8e3d8' stroke-width='3'/%3E%3Ccircle cx='24' cy='8' r='3' fill='%23d6322e'/%3E%3C/svg%3E">
 <style>
-  :root { --bg:#f5f6f8; --card:#fff; --ink:#1d2330; --muted:#667085; --line:#e3e6eb;
-          --ok:#127a3a; --okbg:#e7f6ec; --bad:#b42318; --badbg:#fdecea; --acc:#1f5eff; }
-  * { box-sizing:border-box; }
-  body { margin:0; font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-         background:var(--bg); color:var(--ink); }
-  header { background:#111827; color:#fff; padding:14px 24px; }
-  header h1 { margin:0; font-size:18px; font-weight:600; }
-  header p { margin:2px 0 0; color:#c7cbd3; font-size:13px; }
-  main { max-width:1180px; margin:0 auto; padding:20px 16px 48px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:18px; margin-bottom:16px; }
-  .drop { border:2px dashed #b9c0cc; border-radius:10px; padding:28px; text-align:center; cursor:pointer; }
-  .drop.over { border-color:var(--acc); background:#eef3ff; }
-  .drop input { display:none; }
-  button { background:var(--acc); color:#fff; border:0; border-radius:8px; padding:9px 16px; font-size:15px; cursor:pointer; }
-  button:disabled { opacity:.5; cursor:default; }
-  .row { display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start; }
-  .col-video { flex:1 1 360px; max-width:420px; }
-  .col-res { flex:2 1 480px; min-width:0; }
-  video { width:100%; border-radius:8px; background:#000; max-height:70vh; }
-  .status { color:var(--muted); margin-top:10px; min-height:1.4em; }
-  .bar { height:6px; background:var(--line); border-radius:3px; overflow:hidden; margin-top:8px; }
-  .bar > div { height:100%; width:30%; background:var(--acc); animation:slide 1.2s infinite ease-in-out; }
-  @keyframes slide { 0%{margin-left:-30%} 100%{margin-left:100%} }
-  .verdict { padding:14px 16px; border-radius:8px; font-weight:600; font-size:17px; }
-  .verdict.ok { background:var(--okbg); color:var(--ok); }
-  .verdict.bad { background:var(--badbg); color:var(--bad); }
-  .note { color:var(--muted); font-size:13px; margin-top:6px; }
-  .viol { border:1px solid var(--line); border-radius:8px; padding:14px; margin-top:12px; }
-  .viol h3 { margin:0 0 6px; font-size:16px; }
-  .tc { display:inline-block; background:#eef3ff; color:var(--acc); border-radius:6px; padding:2px 8px;
-        font-variant-numeric:tabular-nums; cursor:pointer; font-weight:600; margin-right:6px; }
-  .frames { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
-  .frames figure { margin:0; }
-  .frames img { height:180px; border-radius:6px; border:1px solid var(--line); cursor:zoom-in; }
-  .frames figcaption { font-size:12px; color:var(--muted); text-align:center; }
-  .rule { margin-top:8px; font-size:13px; background:#f8f9fb; border-left:3px solid #98a2b3; padding:6px 10px; }
-  .err { color:var(--bad); }
-  dialog { border:0; padding:0; background:transparent; }
-  dialog img { max-width:92vw; max-height:92vh; border-radius:8px; }
-  dialog::backdrop { background:rgba(0,0,0,.75); }
+:root{
+  --paper:#efebe2; --card:#f7f4ee;
+  --ink:#121212; --ink2:#46433c; --ink3:#7b766b; --rule2:#b9b1a0;
+  --red:#d6322e; --green:#17803d; --hud:#ffd84a; --mon:#0b0b0b;
+  --display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --text:"Golos Text","Segoe UI",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+*{box-sizing:border-box;border-radius:0}
+html,body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 var(--text);-webkit-font-smoothing:antialiased}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:100;opacity:.6;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .06 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
+::selection{background:var(--ink);color:var(--paper)}
+a{color:inherit}
+button{font:inherit;cursor:pointer;color:inherit}
+.mono{font-family:var(--mono)}
+.page{max-width:1360px;margin:0 auto;padding:0 28px;position:relative}
+.hidden{display:none!important}
+
+/* ---------- masthead ---------- */
+.mast{border-bottom:2px solid var(--ink);position:sticky;top:0;z-index:30;background:rgba(239,235,226,.94);backdrop-filter:blur(6px)}
+.mast .page{display:grid;grid-template-columns:auto 1fr auto;align-items:stretch;min-height:58px}
+.brand{display:flex;align-items:center;gap:14px;padding-right:20px;border-right:1px solid var(--rule2)}
+.brand b{font:900 19px/1 var(--display);letter-spacing:-.5px}
+.brand .lens{width:26px;height:26px;border:4px solid var(--ink);border-radius:50%!important;position:relative;flex:none}
+.brand .lens::after{content:"";position:absolute;top:-8px;right:-9px;width:8px;height:8px;background:var(--red);border-radius:50%!important;animation:rec 1.4s steps(2) infinite}
+@keyframes rec{50%{opacity:.15}}
+.brand span{font:500 12px/1.2 var(--mono);color:var(--ink2);text-transform:uppercase;letter-spacing:.5px}
+.mast .tick{display:flex;align-items:center;gap:22px;padding-left:20px;font:500 12px/1 var(--mono);text-transform:uppercase;letter-spacing:.6px;color:var(--ink2);overflow:hidden;white-space:nowrap}
+.mast .tick i{display:inline-block;width:8px;height:8px;background:var(--green);margin-right:7px}
+.mast .clock{display:flex;align-items:center;padding:0 18px;border-left:1px solid var(--rule2);font:700 15px/1 var(--mono);letter-spacing:.5px}
+.newbtn{border:0;border-left:1px solid var(--rule2);background:var(--ink);color:var(--paper);padding:0 18px;font:700 12px/1 var(--mono);letter-spacing:1px;text-transform:uppercase}
+.newbtn:hover{background:var(--red)}
+
+/* ---------- shared ---------- */
+.label{font:700 11.5px/1 var(--mono);text-transform:uppercase;letter-spacing:1.4px;color:var(--ink2)}
+.blackbtn{flex:none;border:2px solid var(--ink);background:var(--ink);color:var(--paper);padding:15px 22px;font:700 14px/1 var(--mono);text-transform:uppercase;letter-spacing:1px;display:inline-flex;gap:12px;align-items:center;justify-content:center;transition:transform .12s,box-shadow .12s}
+.blackbtn:hover:not(:disabled){transform:translate(-3px,-3px);box-shadow:3px 3px 0 var(--red)}
+.blackbtn:disabled{opacity:.3;cursor:default}
+.linebtn{border:2px solid var(--ink);background:transparent;padding:13px 18px;font:700 13px/1 var(--mono);text-transform:uppercase;letter-spacing:1px}
+.linebtn:hover{background:var(--ink);color:var(--paper)}
+
+/* ---------- monitor (CCTV) ---------- */
+.monitor{position:relative;display:block;background:var(--mon);border:2px solid var(--ink);box-shadow:8px 8px 0 var(--ink);overflow:hidden;color:#f2f2f2}
+.monitor video,.monitor img.still{display:block;width:100%;height:100%;object-fit:contain;background:#000}
+.monitor::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:1;background:repeating-linear-gradient(0deg,rgba(255,255,255,.04) 0 1px,transparent 1px 3px)}
+.hud{position:absolute;inset:0;pointer-events:none;font:600 12px/1 var(--mono);letter-spacing:.8px;text-transform:uppercase;z-index:2}
+.hud .tl,.hud .tr,.hud .bl,.hud .br{position:absolute;padding:5px 7px;background:rgba(0,0,0,.6)}
+.hud .tl{top:12px;left:12px}.hud .tr{top:12px;right:12px}.hud .bl{bottom:12px;left:12px}.hud .br{bottom:12px;right:12px;color:var(--hud)}
+.hud .rec::before{content:"";display:inline-block;width:9px;height:9px;border-radius:50%!important;background:var(--red);margin-right:7px;animation:rec 1.2s steps(2) infinite;vertical-align:-1px}
+.hud .brk{position:absolute;width:22px;height:22px;border:2px solid rgba(255,255,255,.75)}
+.hud .b1{top:44px;left:12px;border-right:0;border-bottom:0}.hud .b2{top:44px;right:12px;border-left:0;border-bottom:0}
+.hud .b3{bottom:44px;left:12px;border-right:0;border-top:0}.hud .b4{bottom:44px;right:12px;border-left:0;border-top:0}
+.hud .flash{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--red);color:#fff;font:800 15px/1.25 var(--display);padding:10px 14px;text-transform:none;display:none;max-width:85%;text-align:center}
+.hud .flash.on{display:block;animation:pop .25s ease-out}
+@keyframes pop{from{transform:translate(-50%,-50%) scale(.85);opacity:0}}
+.scanline{position:absolute;left:0;right:0;height:3px;background:var(--hud);box-shadow:0 0 18px 4px rgba(255,216,74,.5);top:0;animation:scan 2.6s linear infinite;z-index:2}
+@keyframes scan{to{top:100%}}
+
+/* ---------- IDLE ---------- */
+.hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);border-bottom:2px solid var(--ink)}
+.hero .left{padding:54px 40px 40px 0;border-right:1px solid var(--rule2)}
+.kicker{display:flex;gap:16px;align-items:center;margin-bottom:26px;flex-wrap:wrap}
+.kicker .num{font:700 12px/1 var(--mono);background:var(--ink);color:var(--paper);padding:6px 8px}
+h1.mega{font:900 clamp(44px,6.7vw,112px)/.86 var(--display);letter-spacing:-.045em;margin:0;text-transform:uppercase}
+h1.mega em{font-style:normal;color:var(--red)}
+.hero .lede{display:grid;grid-template-columns:1fr .8fr;gap:28px;margin-top:38px;align-items:end}
+.hero .lede p{margin:0;font-size:17px;color:var(--ink2);max-width:520px}
+.hero .right{padding:40px 0 40px 40px;display:flex;flex-direction:column;gap:16px}
+.dropmon{flex:none;width:100%;aspect-ratio:3/4;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.dropmon:hover,.dropmon.over{transform:translate(-4px,-4px);box-shadow:12px 12px 0 var(--red)}
+.dropmon svg.plan{position:absolute;inset:0;width:100%;height:100%}
+.dropmon .cta{position:absolute;left:0;right:0;bottom:64px;padding:16px 20px 0;background:linear-gradient(transparent,rgba(0,0,0,.75) 30%);text-align:center;z-index:3;font:800 19px/1.2 var(--display);text-transform:uppercase}
+.dropmon .cta small{display:block;margin-top:9px;font:500 12px/1 var(--mono);letter-spacing:1px;color:#bdbdbd}
+.filebar{display:flex;align-items:center;gap:12px;border:2px solid var(--ink);background:var(--card);padding:10px 12px;font:500 13px/1.3 var(--mono)}
+.filebar b{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.facts{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:2px solid var(--ink)}
+.fact{padding:26px 24px 24px 0;border-right:1px solid var(--rule2)}
+.fact+.fact{padding-left:24px}.fact:last-child{border-right:0}
+.fact b{display:block;font:900 64px/.9 var(--display);letter-spacing:-.04em}
+.fact span{display:block;margin-top:10px;color:var(--ink2);font-size:14.5px;max-width:300px}
+.register{padding:48px 0 70px}
+.reg-head{display:flex;justify-content:space-between;align-items:end;gap:20px;margin-bottom:18px;flex-wrap:wrap}
+.reg-head h2{font:900 40px/1 var(--display);letter-spacing:-.03em;margin:0;text-transform:uppercase}
+.reg-head p{margin:0;max-width:520px;color:var(--ink2);font-size:14.5px}
+table.reg{width:100%;border-collapse:collapse;border-top:2px solid var(--ink)}
+table.reg th{font:700 11px/1 var(--mono);letter-spacing:1.3px;text-transform:uppercase;color:var(--ink2);text-align:left;padding:12px 10px;border-bottom:1px solid var(--ink)}
+table.reg td{padding:16px 10px;border-bottom:1px solid var(--rule2);vertical-align:top;font-size:14.5px}
+table.reg tbody tr{transition:background .12s}
+table.reg tbody tr:hover{background:var(--ink)}
+table.reg tbody tr:hover td{color:var(--paper)}
+table.reg td.n{font:700 13px/1.4 var(--mono);width:56px}
+table.reg td.t{font:700 16px/1.3 var(--text);width:28%}
+table.reg td.w{color:var(--ink2)}
+table.reg td.c{font:500 12.5px/1.6 var(--mono);width:22%}
+
+/* ---------- PROCESSING ---------- */
+.proc{display:grid;grid-template-columns:minmax(0,440px) 1fr;gap:48px;padding:44px 0 70px;align-items:start}
+.proc .monitor{aspect-ratio:3/4}
+.proc h2{font:900 clamp(40px,5vw,72px)/.9 var(--display);letter-spacing:-.04em;margin:8px 0 18px;text-transform:uppercase}
+.bigtimer{font:700 76px/1 var(--mono);letter-spacing:-3px;margin:4px 0 24px}
+.segs{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:26px}
+.seg{border:2px solid var(--ink);height:46px;position:relative;overflow:hidden;background:var(--card)}
+.seg i{position:absolute;inset:0;width:0;background:var(--ink);transition:width .4s}
+.seg span{position:absolute;left:8px;bottom:7px;font:700 10.5px/1 var(--mono);letter-spacing:.8px;text-transform:uppercase;mix-blend-mode:difference;color:#fff}
+.term{background:var(--ink);color:#e9e5da;font:500 13px/1.8 var(--mono);padding:18px;min-height:250px;border:2px solid var(--ink);box-shadow:8px 8px 0 var(--rule2)}
+.term .ln{white-space:pre-wrap}
+.term .ln b{color:var(--hud);font-weight:700}
+.term .ln.err{color:#ff8b87}
+.term .cur::after{content:"█";animation:rec 1s steps(2) infinite;margin-left:3px}
+
+/* ---------- RESULT / PROTOCOL ---------- */
+.doc-head{display:grid;grid-template-columns:1fr auto;gap:30px;padding:40px 0 28px;border-bottom:2px solid var(--ink)}
+.doc-head h2{font:900 clamp(40px,6vw,92px)/.86 var(--display);letter-spacing:-.045em;margin:12px 0 0;text-transform:uppercase}
+.doc-meta{display:flex;flex-wrap:wrap;margin-top:26px;border-top:1px solid var(--rule2)}
+.doc-meta div{padding:12px 26px 0 0;margin-right:26px;border-right:1px solid var(--rule2)}
+.doc-meta div:last-child{border-right:0}
+.doc-meta b{display:block;font:700 22px/1.15 var(--mono);margin-top:6px}
+.stamp{align-self:center;justify-self:end;transform:rotate(-7deg);border:5px solid currentColor;padding:16px 22px;text-align:center;font:900 28px/1 var(--display);text-transform:uppercase;letter-spacing:-.5px;position:relative;mix-blend-mode:multiply;
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='s'%3E%3CfeTurbulence baseFrequency='.6' numOctaves='3'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -2.4 1.7'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23s)'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='s'%3E%3CfeTurbulence baseFrequency='.6' numOctaves='3'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -2.4 1.7'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23s)'/%3E%3C/svg%3E");
+  animation:stamp .5s cubic-bezier(.2,1.6,.4,1) .2s both}
+.stamp::before{content:"";position:absolute;inset:4px;border:2px solid currentColor}
+.stamp small{display:block;font:700 12px/1.2 var(--mono);letter-spacing:1.5px;margin-top:9px}
+.stamp.bad{color:var(--red)}.stamp.ok{color:var(--green)}
+@keyframes stamp{from{transform:rotate(-7deg) scale(2.4);opacity:0}}
+.viewer{display:grid;grid-template-columns:minmax(0,420px) 1fr;gap:40px;padding:34px 0 34px;border-bottom:2px solid var(--ink)}
+.viewer .monitor{aspect-ratio:3/4}
+.chron h3{font:900 26px/1 var(--display);text-transform:uppercase;letter-spacing:-.02em;margin:0 0 14px}
+.chron ol{list-style:none;margin:0;padding:0;border-top:2px solid var(--ink)}
+.chron li{display:grid;grid-template-columns:58px 92px 1fr;gap:10px;align-items:center;padding:15px 8px;border-bottom:1px solid var(--rule2);cursor:pointer;transition:background .12s}
+.chron li:hover,.chron li.on{background:var(--ink);color:var(--paper)}
+.chron li .x{font:800 24px/1 var(--display)}
+.chron li .tt{font:700 15px/1 var(--mono)}
+.chron li .nm{font-weight:600}
+.chron li.clean{display:block;cursor:default;color:var(--ink2)}
+.chron li.clean:hover{background:none;color:var(--ink2)}
+.strip{margin-top:30px}
+.strip .lbls{display:flex;gap:20px;align-items:center;margin-bottom:38px;flex-wrap:wrap}
+.strip .lbls i{display:inline-block;width:14px;height:10px;margin-right:6px;vertical-align:-1px}
+.film{position:relative;border:2px solid var(--ink);background:var(--ink);cursor:pointer;user-select:none}
+.thumbs{display:flex;height:86px;gap:2px;padding:6px 6px 0;overflow:hidden}
+.thumbs img,.thumbs div{flex:1;min-width:0;height:100%;object-fit:cover;background:#202020}
+.people{height:14px;margin:4px 6px 0;position:relative;background:#262626}
+.people span{position:absolute;top:0;bottom:0;background:var(--hud)}
+.ruler{height:22px;position:relative;margin:0 6px;color:#a0a0a0;font:500 10px/1 var(--mono)}
+.ruler span{position:absolute;top:8px;transform:translateX(-50%)}
+.ruler span::before{content:"";position:absolute;left:50%;top:-8px;width:1px;height:5px;background:#888}
+.pin{position:absolute;top:-30px;bottom:22px;width:2px;background:var(--red);transform:translateX(-1px);z-index:3}
+.pin b{position:absolute;top:0;left:50%;transform:translateX(-50%);background:var(--red);color:#fff;font:800 12px/1 var(--display);padding:5px 6px;white-space:nowrap}
+.pin:hover b,.pin.on b{background:#fff;color:var(--red);outline:2px solid var(--red)}
+.playhead{position:absolute;top:0;bottom:22px;width:2px;background:#fff;box-shadow:0 0 0 1px #000;z-index:4;left:6px;pointer-events:none}
+.tip{position:fixed;z-index:80;pointer-events:none;background:var(--ink);color:var(--paper);font:500 12.5px/1.4 var(--mono);padding:8px 10px;max-width:300px;display:none}
+.exhibits{padding:4px 0 10px}
+.exh{display:grid;grid-template-columns:150px minmax(0,1.05fr) minmax(0,1fr);border-bottom:2px solid var(--ink);padding:38px 0;scroll-margin-top:80px}
+.exh .no{font:900 96px/.8 var(--display);letter-spacing:-.05em}
+.exh .no small{display:block;font:700 11px/1 var(--mono);letter-spacing:1.4px;margin-bottom:12px}
+.exh .prints{display:flex;gap:16px;flex-wrap:wrap;padding-right:34px;align-content:flex-start}
+.print{position:relative;background:#fff;padding:8px 8px 30px;box-shadow:5px 6px 0 rgba(0,0,0,.14);width:calc(50% - 8px);min-width:150px;cursor:zoom-in;transition:transform .15s;margin:0}
+.print:nth-child(odd){transform:rotate(-1.3deg)}.print:nth-child(even){transform:rotate(1.1deg)}
+.print:hover{transform:rotate(0) scale(1.03);z-index:2}
+.print .ph{position:relative;background:#000;overflow:hidden}
+.print img{display:block;width:100%}
+.print figcaption{position:absolute;left:8px;right:8px;bottom:8px;display:flex;justify-content:space-between;font:700 11px/1 var(--mono);letter-spacing:.6px}
+.print .tape{position:absolute;top:-10px;left:50%;width:74px;height:20px;transform:translateX(-50%) rotate(-3deg);background:rgba(255,216,74,.78);z-index:2}
+.mark{position:absolute;border:2px solid var(--hud);box-shadow:0 0 0 1px rgba(0,0,0,.6)}
+.mark.object{border-color:#ff5b56}
+.mark i{position:absolute;left:-2px;top:-16px;background:var(--hud);color:#000;font:700 9.5px/1 var(--mono);padding:3px 4px;text-transform:uppercase;font-style:normal;white-space:nowrap}
+.mark.object i{background:#ff5b56;color:#fff}
+.exh h3{font:800 30px/1.06 var(--display);letter-spacing:-.025em;margin:0 0 16px}
+.exh .tc{display:inline-flex;align-items:center;gap:9px;border:2px solid var(--ink);background:var(--ink);color:var(--paper);font:700 14px/1 var(--mono);padding:9px 12px;margin-bottom:20px}
+.exh .tc:hover{background:var(--red);border-color:var(--red)}
+.field{border-top:1px solid var(--ink);padding:11px 0 15px}
+.field .label{margin-bottom:8px}
+.field p{margin:0;font-size:15px}
+.field p.dim{color:var(--ink2)}
+.cite{border-left:5px solid var(--ink);padding:3px 0 3px 14px;margin:2px 0 10px;font-size:14.5px}
+.cite b{display:block;font:700 12.5px/1.4 var(--mono);margin-bottom:6px}
+.src{font:700 12.5px/1 var(--mono);text-decoration:none;border-bottom:2px solid var(--red)}
+.conf{display:flex;align-items:center;gap:10px}
+.gauge{flex:1;max-width:240px;height:12px;border:2px solid var(--ink);position:relative;background:repeating-linear-gradient(90deg,transparent 0 9%,var(--rule2) 9% calc(9% + 1px))}
+.gauge i{position:absolute;top:0;bottom:0;left:0;background:var(--ink)}
+.conf b{font:700 15px/1 var(--mono)}
+.sign{display:grid;grid-template-columns:1fr 1fr 1fr;gap:30px;padding:36px 0 60px}
+.sign div{border-top:1px solid var(--ink);padding-top:8px;font:500 12px/1.6 var(--mono);color:var(--ink2);text-transform:uppercase;letter-spacing:.5px}
+.sign .acts{border:0;display:flex;gap:12px;justify-content:flex-end;align-items:flex-start;padding:0;flex-wrap:wrap}
+.lightbox{position:fixed;inset:0;z-index:90;background:rgba(10,10,10,.93);display:none;align-items:center;justify-content:center;padding:30px}
+.lightbox.show{display:flex}
+.lightbox .wrap{max-width:min(90vw,760px)}
+.lightbox img{display:block;max-height:82vh;max-width:100%}
+.lightbox .cap{color:#ddd;font:500 13px/1.4 var(--mono);margin-top:10px}
+.lightbox .nav{position:fixed;top:50%;transform:translateY(-50%);width:54px;height:54px;border:2px solid #eee;background:transparent;color:#eee;font:700 22px/1 var(--mono)}
+.lightbox .prev{left:22px}.lightbox .next{right:22px}
+footer{border-top:2px solid var(--ink);padding:16px 0 28px;font:500 12px/1.6 var(--mono);color:var(--ink2);text-transform:uppercase;letter-spacing:.4px}
+.reveal{animation:rv .6s cubic-bezier(.2,.8,.2,1) both}
+@keyframes rv{from{opacity:0;transform:translateY(16px)}}
+:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+@media (max-width:1000px){
+  .hero,.proc,.viewer,.doc-head{grid-template-columns:minmax(0,1fr)}
+  .page{padding:0 16px}
+  .mast .page{grid-template-columns:minmax(0,1fr) auto}
+  .mast .clock{display:none}
+  .monitor{box-shadow:5px 5px 0 var(--ink)}
+  .exh .prints{gap:10px}.print{min-width:0}
+  .chron li{grid-template-columns:44px 72px minmax(0,1fr)}
+  .bigtimer{font-size:56px}
+  .hero .left{padding:34px 0;border-right:0}.hero .right{padding:0 0 34px}
+  .hero .lede{grid-template-columns:1fr}
+  .facts{grid-template-columns:1fr}.fact,.fact+.fact{padding:18px 0;border-right:0;border-bottom:1px solid var(--rule2)}
+  .exh{grid-template-columns:1fr;gap:20px}.exh .no{font-size:64px}.exh .prints{padding-right:0}
+  .sign{grid-template-columns:1fr}.sign .acts{justify-content:flex-start}
+  .stamp{justify-self:start}
+  .mast .tick{display:none}
+  table.reg td.w,table.reg th.w{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
-<header>
-  <h1>CashGuard — проверка видеозаписей кассы</h1>
-  <p>Локальный анализ видимых действий. Результат — подсказка для проверяющего, а не юридическое заключение.</p>
+<header class="mast">
+  <div class="page">
+    <div class="brand"><div class="lens"></div><div><b>CASHGUARD</b><br><span>протокол видеоосмотра кассы</span></div></div>
+    <div class="tick"><span><i></i>модели работают локально</span><span>видео удаляется после анализа</span><span>основания: НБРК № 231 · № 14</span></div>
+    <div style="display:flex"><div class="clock" id="clock">--:--:--</div><button class="newbtn hidden" id="newBtn">Новый осмотр</button></div>
+  </div>
 </header>
+
 <main>
-  <div class="card">
-    <label class="drop" id="drop">
-      <input type="file" id="file" accept=".mov,video/quicktime,video/*">
-      <div><b>Перетащите видео (.mov) сюда</b> или нажмите, чтобы выбрать файл</div>
-      <div class="note" id="fname"></div>
-    </label>
-    <div style="margin-top:12px"><button id="go" disabled>Проверить видео</button></div>
-    <div class="status" id="status"></div>
-    <div class="bar" id="bar" hidden><div></div></div>
+<!-- ======================= IDLE ======================= -->
+<section id="idle">
+  <div class="page">
+    <div class="hero">
+      <div class="left reveal">
+        <div class="kicker"><span class="num">CAM-01</span><span class="label">Видеоконтроль кассовой дисциплины</span></div>
+        <h1 class="mega">Касса<em>.</em><br>Камера<em>.</em><br>Протокол<em>.</em></h1>
+        <div class="lede">
+          <p>Загрузите запись с камеры кассы. Система просмотрит её целиком, найдёт видимые признаки нарушений и соберёт протокол: таймкоды, кадры-доказательства и пункт правил НБРК для каждого события.</p>
+          <p class="mono" style="font-size:13px;color:var(--ink3)">НЕ ЗАКЛЮЧЕНИЕ, А ПОДСКАЗКА.<br>РЕШЕНИЕ ПРИНИМАЕТ ПРОВЕРЯЮЩИЙ.<br>НЕВИДИМОЕ НА ВИДЕО НЕ УТВЕРЖДАЕТСЯ.</p>
+        </div>
+      </div>
+      <div class="right reveal" style="animation-delay:.12s">
+        <label class="monitor dropmon" id="drop">
+          <input type="file" id="file" accept=".mov,.mp4,video/quicktime,video/*" class="hidden">
+          <svg class="plan" viewBox="0 0 300 400" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <defs><pattern id="g" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="#1e1e1e" stroke-width="1"/></pattern></defs>
+            <rect width="300" height="400" fill="url(#g)"/>
+            <g fill="none" stroke="#5c5c5c" stroke-width="2">
+              <rect x="40" y="70" width="220" height="270"/><rect x="70" y="180" width="140" height="56"/><rect x="215" y="110" width="34" height="40"/>
+              <path d="M40 290 a46 46 0 0 1 46 -46" stroke-dasharray="4 4"/><circle cx="140" cy="262" r="12"/>
+            </g>
+            <g font-family="JetBrains Mono, monospace" font-size="9" fill="#868686"><text x="74" y="175">СТОЛ</text><text x="210" y="104">СЕЙФ</text><text x="46" y="236">ДВЕРЬ</text><text x="122" y="290">КАССИР</text></g>
+            <circle r="6" fill="#ffd84a"><animateMotion dur="10s" repeatCount="indefinite" path="M62 318 C 90 290, 110 270, 140 262 S 232 196, 232 160 S 150 150, 140 262 S 75 318, 62 318"/></circle>
+            <circle r="6" fill="none" stroke="#ffd84a" stroke-width="1.5"><animateMotion dur="10s" repeatCount="indefinite" path="M62 318 C 90 290, 110 270, 140 262 S 232 196, 232 160 S 150 150, 140 262 S 75 318, 62 318"/><animate attributeName="r" values="6;22;6" dur="1.8s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0;1" dur="1.8s" repeatCount="indefinite"/></circle>
+          </svg>
+          <div class="scanline"></div>
+          <div class="hud"><div class="tl rec">REC · CAM-01</div><div class="tr" id="hudDate">--.--.----</div><div class="bl">ОЖИДАНИЕ ВИДЕО</div><div class="br" id="hudClock">00:00:00</div>
+            <div class="brk b1"></div><div class="brk b2"></div><div class="brk b3"></div><div class="brk b4"></div></div>
+          <div class="cta">Перетащите .mov<br>на монитор<small>ИЛИ НАЖМИТЕ, ЧТОБЫ ВЫБРАТЬ ФАЙЛ</small></div>
+        </label>
+        <div class="filebar hidden" id="filebar"><span class="label">ФАЙЛ</span><b id="fname"></b><span id="fsize"></span></div>
+        <button class="blackbtn" id="go" disabled>Начать осмотр <span>→</span></button>
+      </div>
+    </div>
+    <div class="facts">
+      <div class="fact reveal" style="animation-delay:.18s"><b>0</b><span>байт видео уходит во внешние сервисы — все модели работают внутри сервиса</span></div>
+      <div class="fact reveal" style="animation-delay:.24s"><b id="nTypes">10</b><span>типов нарушений, каждое привязано к пункту действующего акта РК</span></div>
+      <div class="fact reveal" style="animation-delay:.3s"><b>1</b><span>решение — за человеком: система показывает момент, кадр и норму</span></div>
+    </div>
+    <div class="register">
+      <div class="reg-head"><h2>Реестр проверок</h2><p>Что система умеет увидеть на записи. Тексты норм сверены с ИПС «Әділет», ссылки ведут на официальный текст актов.</p></div>
+      <table class="reg"><thead><tr><th>№</th><th>Нарушение</th><th class="w">Что видит система</th><th>Основание</th></tr></thead><tbody id="reg"></tbody></table>
+    </div>
   </div>
-  <div class="row" id="out" hidden>
-    <div class="col-video card"><video id="player" controls muted playsinline></video>
-      <div class="note">Нажмите на таймкод, чтобы перейти к моменту события.</div></div>
-    <div class="col-res card" id="result"></div>
+</section>
+
+<!-- ======================= PROCESSING ======================= -->
+<section id="proc" class="hidden">
+  <div class="page proc">
+    <div class="monitor"><video id="pv" muted playsinline loop></video><div class="scanline"></div>
+      <div class="hud"><div class="tl rec">АНАЛИЗ · CAM-01</div><div class="tr" id="pvName"></div><div class="bl">ЛОКАЛЬНО</div><div class="br" id="pvClock">0:00.0</div>
+        <div class="brk b1"></div><div class="brk b2"></div><div class="brk b3"></div><div class="brk b4"></div></div></div>
+    <div>
+      <div class="label">Осмотр выполняется</div>
+      <h2>Смотрим запись</h2>
+      <div class="bigtimer" id="timer">00:00</div>
+      <div class="segs" id="segs"></div>
+      <div class="term" id="term"></div>
+    </div>
   </div>
+</section>
+
+<!-- ======================= RESULT ======================= -->
+<section id="res" class="hidden">
+  <div class="page">
+    <div class="doc-head">
+      <div>
+        <div class="label" id="docNo">ПРОТОКОЛ</div>
+        <h2 id="docTitle">Протокол</h2>
+        <div class="doc-meta" id="docMeta"></div>
+      </div>
+      <div class="stamp" id="stamp"></div>
+    </div>
+    <div class="viewer">
+      <div class="monitor" id="rmon"><video id="rv" controls muted playsinline></video>
+        <div class="hud"><div class="tl rec" id="rvTag">ВОСПРОИЗВЕДЕНИЕ</div><div class="br" id="rvClock">0:00.0</div><div class="flash" id="flash"></div></div></div>
+      <div class="chron">
+        <h3>Хронология</h3>
+        <ol id="chron"></ol>
+        <div class="strip">
+          <div class="lbls label"><span><i style="background:var(--hud)"></i>Люди в кадре</span><span><i style="background:var(--red)"></i>Событие</span><span style="margin-left:auto" id="durLbl"></span></div>
+          <div class="film" id="film"><div class="thumbs" id="thumbs"></div><div class="people" id="people"></div><div class="ruler" id="ruler"></div><div class="playhead" id="ph"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="exhibits" id="exh"></div>
+    <div class="sign">
+      <div>Сформировано автоматически · CashGuard<br>Не является юридическим или дисциплинарным заключением</div>
+      <div>Проверяющий ______________________<br>Дата / подпись</div>
+      <div class="acts"><button class="linebtn" id="dl">Скачать JSON</button><button class="blackbtn" id="again">Новый осмотр →</button></div>
+    </div>
+  </div>
+</section>
 </main>
-<dialog id="zoom"><img id="zoomimg" alt=""></dialog>
+
+<footer><div class="page">CashGuard · анализ строго визуальный: звук не используется, лица не распознаются · Правила кассовых операций (Постановление Правления НБРК № 231 от 29.11.2019) · Правила охраны и устройства помещений (№ 14 от 24.02.2020)</div></footer>
+<div class="tip" id="tip"></div>
+<div class="lightbox" id="lb"><button class="nav prev" id="lbPrev" aria-label="Предыдущий кадр">←</button><div class="wrap"><div style="position:relative" id="lbBox"></div><div class="cap" id="lbCap"></div></div><button class="nav next" id="lbNext" aria-label="Следующий кадр">→</button></div>
+
 <script>
 const $ = id => document.getElementById(id);
-let file = null, timer = null;
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pad = n => String(n).padStart(2, "0");
+const fmt = t => { t = Math.max(0, +t || 0); const m = Math.floor(t / 60), s = (t - m * 60).toFixed(1).padStart(4, "0"); return `${m}:${s}`; };
+const short = title => title.includes("№ 231") ? "НБРК № 231" : title.includes("№ 14") ? "НБРК № 14" : "СТ РК ISO/IEC 27002";
+const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+const STAGES = [["upload","ЗАГРУЗКА"],["people","ЛЮДИ"],["scene","СЦЕНА"],["checks","ПРОВЕРКИ"],["report","ПРОТОКОЛ"]];
+const STAGE_TXT = {upload:"передача файла на сервер", people:"детектор людей · отсев отражений за стеклом · вход и выход",
+  scene:"VLM: сейф, стол, ценности, сумка — по кадрам, с автоувеличением зоны", checks:"точечные проверки в ключевые моменты · сопоставление с нормами",
+  report:"кадры-доказательства · таймкоды · основания"};
+let file = null, timer = null, started = 0, R = null, lb = [], lbI = 0, lastStage = "", lastPct = -1;
+
+/* ---------- clock ---------- */
+const tickClock = () => { const d = new Date(), t = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  $("clock").textContent = t; $("hudClock").textContent = t; $("hudDate").textContent = `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`; };
+tickClock(); setInterval(tickClock, 1000);
+
+/* ---------- register ---------- */
+fetch("/ui/types").then(r => r.json()).then(list => {
+  $("nTypes").textContent = list.length;
+  $("reg").innerHTML = list.map((t, i) => `<tr><td class="n">${pad(i + 1)}</td><td class="t">${esc(t.name)}</td><td class="w">${esc(cap(t.why))}</td>
+    <td class="c">${t.rules.map(r => `${esc(short(r.title))}, ${esc(r.clause)}`).join("<br>")}</td></tr>`).join("");
+}).catch(() => {});
+
+/* ---------- file pick ---------- */
 const drop = $("drop");
-drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over"); });
-drop.addEventListener("dragleave", () => drop.classList.remove("over"));
-drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("over");
-  if (e.dataTransfer.files.length) pick(e.dataTransfer.files[0]); });
-$("file").addEventListener("change", e => e.target.files.length && pick(e.target.files[0]));
-function pick(f) { file = f; $("fname").textContent = `${f.name} · ${(f.size/1048576).toFixed(1)} МБ`;
-  $("go").disabled = false; }
-function fmt(t) { const m = Math.floor(t/60), s = (t - m*60).toFixed(1).padStart(4, "0");
-  return `${m}:${s}`; }
-function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
-function setStatus(msg, busy, cls) { $("status").innerHTML = cls ? `<span class="${cls}">${esc(msg)}</span>` : esc(msg);
-  $("bar").hidden = !busy; }
-$("go").addEventListener("click", async () => {
+["dragenter","dragover"].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.add("over"); }));
+["dragleave","drop"].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", ev => ev.dataTransfer.files.length && pick(ev.dataTransfer.files[0]));
+$("file").addEventListener("change", ev => ev.target.files.length && pick(ev.target.files[0]));
+function pick(f) { file = f; $("fname").textContent = f.name; $("fsize").textContent = `${(f.size / 1048576).toFixed(1)} МБ`; $("filebar").classList.remove("hidden"); $("go").disabled = false; $("go").focus(); }
+$("go").onclick = () => start();
+function show(id) { ["idle","proc","res"].forEach(s => $(s).classList.toggle("hidden", s !== id)); $("newBtn").classList.toggle("hidden", id === "idle"); window.scrollTo({top: 0}); }
+$("newBtn").onclick = $("again").onclick = () => { clearInterval(timer); history.replaceState(null, "", location.pathname); show("idle"); };
+
+/* ---------- processing ---------- */
+function log(html, cls = "") { const t = $("term"); t.querySelectorAll(".cur").forEach(e => e.classList.remove("cur"));
+  const d = new Date(); t.insertAdjacentHTML("beforeend", `<div class="ln ${cls} cur">${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())} ▸ ${html}</div>`);
+  while (t.children.length > 11) t.firstChild.remove(); }
+function stage(st, frac) {
+  const idx = Math.max(0, STAGES.findIndex(s => s[0] === st));
+  $("segs").innerHTML = STAGES.map((s, i) => `<div class="seg"><i style="width:${i < idx ? 100 : i === idx ? Math.round((frac || 0) * 100) : 0}%"></i><span>${pad(i + 1)} ${s[1]}</span></div>`).join("");
+  const pct = Math.floor((frac || 0) * 4) * 25;
+  if (st !== lastStage) { log(`<b>${STAGES[idx][1]}</b> — ${STAGE_TXT[st]}`); lastStage = st; lastPct = -1; }
+  else if (pct !== lastPct && pct > 0 && pct < 100) log(`${STAGES[idx][1].toLowerCase()} · ${pct}%`);
+  lastPct = pct;
+}
+async function start() {
   if (!file) return;
-  $("go").disabled = true; clearInterval(timer);
-  $("out").hidden = false; $("result").innerHTML = "";
-  $("player").src = URL.createObjectURL(file);
-  setStatus("Загрузка видео…", true);
-  const fd = new FormData(); fd.append("file", file);
-  try {
-    const r = await fetch("/ui/analyze", { method: "POST", body: fd });
-    const j = await r.json();
-    if (!r.ok) throw new Error(j.detail || r.statusText);
-    poll(j.job_id, Date.now());
-  } catch (e) { setStatus("Ошибка загрузки: " + e.message, false, "err"); $("go").disabled = false; }
-});
-function poll(id, t0) {
-  timer = setInterval(async () => {
-    try {
-      const r = await fetch("/ui/jobs/" + id); const j = await r.json();
-      const sec = Math.round((Date.now() - t0) / 1000);
+  const url = URL.createObjectURL(file);
+  $("pv").src = url; $("pv").play().catch(() => {}); $("rv").src = url; $("pvName").textContent = file.name.slice(0, 22);
+  $("term").innerHTML = ""; lastStage = ""; show("proc"); stage("upload", 0); started = Date.now();
+  clearInterval(timer); timer = setInterval(() => { const s = Math.round((Date.now() - started) / 1000); $("timer").textContent = `${pad(Math.floor(s / 60))}:${pad(s % 60)}`; }, 250);
+  try { const job = await upload(file); log(`задача <b>${job.job_id}</b> принята`); history.replaceState(null, "", "#job=" + job.job_id); poll(job.job_id); }
+  catch (e) { fail("не удалось загрузить видео: " + e.message); }
+}
+$("pv").ontimeupdate = () => $("pvClock").textContent = fmt($("pv").currentTime);
+function upload(f) {
+  return new Promise((ok, no) => { const x = new XMLHttpRequest(), fd = new FormData(); fd.append("file", f); x.open("POST", "/ui/analyze");
+    x.upload.onprogress = e => e.lengthComputable && stage("upload", e.loaded / e.total);
+    x.onload = () => { let j = {}; try { j = JSON.parse(x.responseText); } catch {} x.status === 200 ? ok(j) : no(new Error(j.detail || x.statusText)); };
+    x.onerror = () => no(new Error("нет связи с сервером")); x.send(fd); });
+}
+function fail(msg) { clearInterval(timer); log(msg, "err"); }
+function poll(id) {
+  let queued = -1;
+  const tick = async () => {
+    try { const j = await (await fetch("/ui/jobs/" + id)).json();
       if (j.status === "processing") {
-        const q = j.queue_position > 0 ? ` · в очереди перед вами: ${j.queue_position}` : "";
-        setStatus(`Идёт анализ… ${sec} с${q}`, true); return;
-      }
-      clearInterval(timer); $("go").disabled = false;
-      if (j.status === "failed") { setStatus("Не удалось обработать видео: " + j.error, false, "err"); return; }
-      setStatus(`Готово за ${j.processing_time_sec ?? sec} с · задача ${j.job_id}`, false);
-      render(j);
-    } catch (e) { setStatus("Нет связи с сервером, повторяю…", true); }
-  }, 1500);
+        if (!j.stage && j.queue_position > 0 && j.queue_position !== queued) { queued = j.queue_position; log(`в очереди · перед вами ${queued}`); }
+        if (j.stage) stage(j.stage, j.stage_progress); return setTimeout(tick, 700); }
+      clearInterval(timer);
+      if (j.status === "failed") return fail("обработка не удалась: " + (j.error || ""));
+      stage("report", 1); log(`<b>ГОТОВО</b> — событий: ${(j.violations || []).length}`); setTimeout(() => render(j), 600);
+    } catch { setTimeout(tick, 1500); } };
+  tick();
 }
+
+/* ---------- protocol ---------- */
+function split(d) { const a = d.split(" Почему это может быть нарушением: "); let why = "";
+  if (a[1]) why = a[1].split(" Основание: ")[0].replace(/\.$/, ""); return {obs: a[0], why}; }
+function events(n) { return n === 1 ? "СОБЫТИЕ" : n < 5 ? "СОБЫТИЯ" : "СОБЫТИЙ"; }
 function render(j) {
-  const v = j.violations || [];
-  let h = v.length
-    ? `<div class="verdict bad">Обнаружены признаки возможных нарушений: ${v.length}</div>`
-    : `<div class="verdict ok">Нарушение не обнаружено</div>`;
-  if (j.summary) h += `<div class="note">${esc(j.summary)}</div>`;
-  v.forEach((x, i) => {
-    const frames = (x.evidence_frames || []).map(f =>
-      `<figure><img src="data:image/jpeg;base64,${f.image_base64}" data-t="${f.timestamp_sec}" alt="кадр ${fmt(f.timestamp_sec)}">
-       <figcaption>${fmt(f.timestamp_sec)}</figcaption></figure>`).join("");
-    const rule = x.rule ? `<div class="rule"><b>Основание:</b> ${esc(x.rule.title)}${x.rule.clause ? ", " + esc(x.rule.clause) : ""}.
-       ${x.rule.text ? "<br>" + esc(x.rule.text) : ""}</div>` : "";
-    h += `<div class="viol"><h3>${i + 1}. ${esc(x.type)}</h3>
-      <span class="tc" data-t="${x.timecode_sec}">${fmt(x.timecode_sec)}</span>
-      <span class="note">${x.confidence != null ? "уверенность " + Math.round(x.confidence * 100) + "%" : ""}</span>
-      <p style="margin:8px 0 0">${esc(x.description)}</p>${rule}<div class="frames">${frames}</div></div>`;
-  });
-  $("result").innerHTML = h;
-  $("result").querySelectorAll(".tc").forEach(el => el.addEventListener("click", () => seek(+el.dataset.t)));
-  $("result").querySelectorAll(".frames img").forEach(el => el.addEventListener("click", () => {
-    $("zoomimg").src = el.src; $("zoom").showModal(); seek(+el.dataset.t); }));
+  R = j; const v = j.violations || [], dur = j.video?.duration_sec || 0, bad = v.length > 0, d = new Date();
+  $("docNo").textContent = `ПРОТОКОЛ № ${j.job_id.toUpperCase()} · ${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} · ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  $("docTitle").innerHTML = bad ? `${v.length} ${events(v.length).toLowerCase()}<br>для проверки` : "Нарушений<br>не выявлено";
+  $("docMeta").innerHTML = [["файл", (j.filename || "видео").slice(0, 26)], ["длительность", fmt(dur)], ["обработка", (j.processing_time_sec ?? "—") + " с"], ["модели", "локально"]]
+    .map(([k, x]) => `<div><span class="label">${k}</span><b>${esc(x)}</b></div>`).join("");
+  $("stamp").className = "stamp " + (bad ? "bad" : "ok");
+  $("stamp").innerHTML = bad ? `Требует<br>проверки<small>${v.length} ${events(v.length)}</small>` : `Нарушений<br>не выявлено<small>ПО ПОДДЕРЖИВАЕМЫМ ТИПАМ</small>`;
+  $("chron").innerHTML = bad ? v.map((x, i) => `<li data-i="${i}" tabindex="0"><span class="x">${pad(i + 1)}</span><span class="tt">${fmt(x.timecode_sec)}</span><span class="nm">${esc(x.type)}</span></li>`).join("")
+    : `<li class="clean">Запись просмотрена целиком: люди, сейф, стол, ноутбук, приход и уход посетителей. Событий для проверки нет. Отсутствие срабатывания не гарантирует отсутствие нарушений других типов.</li>`;
+  $("exh").innerHTML = bad ? v.map(exhibit).join("") : "";
+  $("durLbl").textContent = fmt(dur);
+  const mon = $("rmon"); mon.querySelectorAll("img.still").forEach(e => e.remove()); $("rv").classList.toggle("hidden", !file);
+  if (!file) { const f0 = v[0]?.evidence_frames?.[0]; if (f0) mon.insertAdjacentHTML("afterbegin", `<img class="still" src="data:image/jpeg;base64,${f0.image_base64}" alt="">`);
+    $("rvTag").textContent = "КАДР · ВИДЕО НЕ ХРАНИТСЯ"; } else $("rvTag").textContent = "ВОСПРОИЗВЕДЕНИЕ";
+  show("res"); strip(j);
+  document.querySelectorAll("#chron li[data-i]").forEach(li => { const go = () => jump(+li.dataset.i); li.onclick = go; li.onkeydown = e => e.key === "Enter" && go(); });
+  document.querySelectorAll(".exh .tc").forEach(b => b.onclick = () => jump(+b.dataset.i, true));
+  document.querySelectorAll(".print").forEach(p => p.onclick = () => openLb(+p.dataset.i, +p.dataset.k));
 }
-function seek(t) { const p = $("player"); p.currentTime = Math.max(0, t - 1); p.play().catch(() => {}); }
-$("zoom").addEventListener("click", () => $("zoom").close());
+function marks(f) { return (f.marks || []).map(m => { const [x1, y1, x2, y2] = m.box;
+  return `<div class="mark ${m.kind === "object" ? "object" : ""}" style="left:${x1 * 100}%;top:${y1 * 100}%;width:${(x2 - x1) * 100}%;height:${(y2 - y1) * 100}%"><i>${esc(m.label)}</i></div>`; }).join(""); }
+function exhibit(x, i) {
+  const s = split(x.description || ""), c = x.confidence != null ? Math.round(x.confidence * 100) : null, r = x.rule || {};
+  const prints = (x.evidence_frames || []).map((f, k) => `<figure class="print" data-i="${i}" data-k="${k}"><div class="tape"></div>
+    <div class="ph"><img src="data:image/jpeg;base64,${f.image_base64}" alt="Кадр ${fmt(f.timestamp_sec)}">${marks(f)}</div>
+    <figcaption><span>ВЕЩДОК ${pad(i + 1)}-${String.fromCharCode(65 + k)}</span><span>${fmt(f.timestamp_sec)}</span></figcaption></figure>`).join("");
+  return `<article class="exh" id="ex${i}"><div class="no"><small>ВЕЩДОК</small>${pad(i + 1)}</div>
+    <div class="prints">${prints}</div>
+    <div><h3>${esc(x.type)}</h3><button class="tc" data-i="${i}">▶ ${fmt(x.timecode_sec)} · к моменту</button>
+      <div class="field"><div class="label">Наблюдение</div><p>${esc(s.obs)}</p></div>
+      ${s.why ? `<div class="field"><div class="label">Почему это важно</div><p class="dim">${esc(cap(s.why))}.</p></div>` : ""}
+      ${r.title ? `<div class="field"><div class="label">Основание</div><div class="cite"><b>${esc(short(r.title))}, ${esc(r.clause)}</b>${esc(r.text)}</div>
+        ${(x.rules || []).length > 1 ? `<p class="dim mono" style="font-size:12.5px;margin:0 0 10px">ТАКЖЕ: ${x.rules.slice(1).map(q => esc(short(q.title) + ", " + q.clause)).join(" · ")}</p>` : ""}
+        <a class="src" href="${esc(r.url)}" target="_blank" rel="noopener">ТЕКСТ АКТА ↗</a></div>` : ""}
+      ${c != null ? `<div class="field"><div class="label">Уверенность системы</div><div class="conf"><div class="gauge"><i style="width:${c}%"></i></div><b>${c}%</b></div></div>` : ""}
+    </div></article>`;
+}
+function jump(i, fromCard) {
+  const x = R.violations[i];
+  if (file) { $("rv").currentTime = Math.max(0, x.timecode_sec - 1.5); $("rv").play().catch(() => {}); }
+  document.querySelectorAll("#chron li").forEach(li => li.classList.toggle("on", +li.dataset.i === i));
+  document.querySelectorAll(".pin").forEach(pn => pn.classList.toggle("on", +pn.dataset.i === i));
+  (fromCard ? $("rmon") : $("ex" + i))?.scrollIntoView({behavior: "smooth", block: fromCard ? "center" : "start"});
+}
+
+/* ---------- filmstrip: thumbnails + people per second + event pins on one time axis ---------- */
+async function strip(j) {
+  const dur = Math.max(1, j.video?.duration_sec || 1), v = j.violations || [], sig = j.signals || {people: []};
+  const film = $("film"), th = $("thumbs"), n = 10, X = t => `calc(6px + (100% - 12px) * ${Math.min(1, t / dur)})`;
+  th.innerHTML = Array.from({length: n}, () => "<div></div>").join("");
+  $("people").innerHTML = sig.people.map((p, k) => p > 0 ? `<span style="left:${k / dur * 100}%;width:${100 / dur}%;opacity:${p > 1 ? 1 : .55}" title="${fmt(k)} · людей: ${p}"></span>` : "").join("");
+  const step = dur > 90 ? 30 : dur > 40 ? 10 : 5; let rl = "";
+  for (let t = 0; t <= dur + 0.01; t += step) rl += `<span style="left:${t / dur * 100}%">${fmt(t).replace(/\.\d$/, "")}</span>`; $("ruler").innerHTML = rl;
+  film.querySelectorAll(".pin").forEach(e => e.remove());
+  v.forEach((x, i) => film.insertAdjacentHTML("beforeend", `<div class="pin" data-i="${i}" style="left:${X(x.timecode_sec)}"><b>${pad(i + 1)}</b></div>`));
+  const tip = $("tip");
+  film.querySelectorAll(".pin").forEach(pn => { const x = v[+pn.dataset.i];
+    pn.onmousemove = e => { tip.style.display = "block"; tip.style.left = e.clientX + 14 + "px"; tip.style.top = e.clientY - 12 + "px"; tip.textContent = `${pad(+pn.dataset.i + 1)} · ${fmt(x.timecode_sec)} · ${x.type}`; };
+    pn.onmouseleave = () => tip.style.display = "none";
+    pn.onclick = e => { e.stopPropagation(); jump(+pn.dataset.i); }; });
+  film.onclick = e => { if (!file) return; const r = film.getBoundingClientRect(); $("rv").currentTime = Math.max(0, (e.clientX - r.left - 6) / (r.width - 12) * dur); $("rv").play().catch(() => {}); };
+  $("rv").ontimeupdate = () => { const t = $("rv").currentTime; $("ph").style.left = X(t); $("rvClock").textContent = fmt(t);
+    const hit = v.findIndex(x => Math.abs(x.timecode_sec - t) < 1.2), fl = $("flash");
+    if (hit >= 0) { fl.textContent = `${pad(hit + 1)} · ${v[hit].type}`; fl.classList.add("on"); } else fl.classList.remove("on"); };
+  // thumbnails from the local file (it is never uploaded again); evidence frames otherwise
+  if (file) { try { const vid = document.createElement("video"); vid.muted = true; vid.src = $("rv").src; vid.preload = "auto";
+      await new Promise((ok, no) => { vid.onloadeddata = ok; vid.onerror = no; });
+      const cv = document.createElement("canvas"), ctx = cv.getContext("2d"); cv.width = 120; cv.height = Math.round(120 * vid.videoHeight / Math.max(1, vid.videoWidth));
+      for (let k = 0; k < n; k++) { vid.currentTime = (k + .5) * dur / n; await new Promise(ok => vid.onseeked = ok);
+        ctx.drawImage(vid, 0, 0, cv.width, cv.height); th.children[k].outerHTML = `<img src="${cv.toDataURL("image/jpeg", .7)}" alt="">`; } } catch {} }
+  else { const fr = v.flatMap(x => x.evidence_frames || []); if (fr.length) for (let k = 0; k < n; k++) th.children[k].outerHTML = `<img src="data:image/jpeg;base64,${fr[k % fr.length].image_base64}" alt="">`; }
+}
+
+/* ---------- lightbox ---------- */
+function openLb(i, k) { lb = []; R.violations.forEach((x, a) => (x.evidence_frames || []).forEach((f, b) => lb.push({f, a, b, cap: `ВЕЩДОК ${pad(a + 1)}-${String.fromCharCode(65 + b)} · ${fmt(f.timestamp_sec)} · ${x.type}`})));
+  lbI = Math.max(0, lb.findIndex(e => e.a === i && e.b === k)); showLb(); $("lb").classList.add("show"); }
+function showLb() { const e = lb[lbI]; $("lbBox").innerHTML = `<img src="data:image/jpeg;base64,${e.f.image_base64}" alt="">${marks(e.f)}`; $("lbCap").textContent = e.cap; }
+$("lbPrev").onclick = e => { e.stopPropagation(); lbI = (lbI - 1 + lb.length) % lb.length; showLb(); };
+$("lbNext").onclick = e => { e.stopPropagation(); lbI = (lbI + 1) % lb.length; showLb(); };
+$("lb").onclick = () => $("lb").classList.remove("show");
+document.addEventListener("keydown", e => { if (!$("lb").classList.contains("show")) return; if (e.key === "Escape") $("lb").classList.remove("show");
+  if (e.key === "ArrowLeft") $("lbPrev").click(); if (e.key === "ArrowRight") $("lbNext").click(); });
+$("dl").onclick = () => { if (!R) return; const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(R, null, 2)], {type: "application/json"})); a.download = `protocol_${R.job_id}.json`; a.click(); };
+
+/* ---------- open by link: /#job=<id> ---------- */
+(async () => { const m = location.hash.match(/job=([0-9a-f]+)/); if (!m) return;
+  try { const j = await (await fetch("/ui/jobs/" + m[1])).json();
+    if (j.status === "done") render(j);
+    else if (j.status === "processing") { show("proc"); $("term").innerHTML = ""; log(`задача <b>${m[1]}</b> выполняется`); started = Date.now();
+      timer = setInterval(() => { const s = Math.round((Date.now() - started) / 1000); $("timer").textContent = `${pad(Math.floor(s / 60))}:${pad(s % 60)}`; }, 250); poll(m[1]); } } catch {} })();
 </script>
 </body>
 </html>

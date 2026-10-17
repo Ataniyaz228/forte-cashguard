@@ -38,6 +38,12 @@ TH = {
 }
 
 
+# types the active rules can report (UI catalogue, docs); the rest are documented limits
+REPORTED_TYPES = ("safe_open", "key_in_safe", "valuables_unattended", "screen_unlocked",
+                  "cash_exposed_next_client", "no_courier_check", "no_recount", "stranger",
+                  "food", "personal_items")
+
+
 @dataclass
 class Candidate:
     code: str

@@ -98,7 +98,8 @@ class SceneVLM:
         return out
 
     @torch.inference_mode()
-    def yes_prob_shared(self, images: list[Image.Image], keys: list[str]) -> np.ndarray:
+    def yes_prob_shared(self, images: list[Image.Image], keys: list[str],
+                        on_frame=None) -> np.ndarray:
         """Same output as yes_prob, ~4x faster: the image (and chat prefix) is encoded once
         per frame, then each question continues from the cached prefix (KV cache)."""
         out = np.zeros((len(images), len(keys)), dtype=np.float32)
@@ -134,6 +135,8 @@ class SceneVLM:
                 ly = torch.logsumexp(lg[self.yes_ids], dim=-1)
                 ln = torch.logsumexp(lg[self.no_ids], dim=-1)
                 out[i, j] = float(torch.sigmoid(ly - ln))
+            if on_frame is not None:
+                on_frame(i + 1, len(images))
         return out
 
     @torch.inference_mode()
