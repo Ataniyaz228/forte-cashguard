@@ -27,6 +27,11 @@ PROBES = {
                  "money counting machine (for example papers, a tablet, money, a bag or a "
                  "drink)?",
     "desk_cash": "Are banknotes or stacks of cash lying on the desk?",
+    # same question on 4 overlapping zoomed tiles of the desk (small piles at the edge, E026)
+    "desk_cash4": "Are banknotes or stacks of cash lying on the desk?",
+    "bag_seen": "Is a cash bag (a fabric or plastic money bag or pouch for cash collection) "
+                "visible in the image, on the desk or in someone's hands?",
+    "desk_food": "Is there food or a drink (a cup, mug, bottle, snack or meal) on the desk?",
     # laptop crop: an open work session vs a lock/login screen, wallpaper or switched off
     "screen_app": "Is this laptop screen showing an open program, spreadsheet, table or "
                   "document (not a lock screen, login screen, wallpaper, or a dark screen)?",
@@ -35,6 +40,7 @@ PROBES = {
                      "the desk?",
 }
 CROP = {"safe_open": "safe", "key_in_lock": "lock", "desk_left": "desk", "desk_cash": "desk",
+        "desk_food": "desk", "desk_cash4": "desk_tiles",
         "screen_app": "laptop"}
 GROUND_Q = ('Locate the grey metal safe (cabinet) in the image and output its bbox '
             'coordinates in JSON format as [{"bbox_2d": [x1, y1, x2, y2], "label": "safe"}].')
@@ -63,6 +69,14 @@ def _crop(img: Image.Image, b, pad=0.25, size=448) -> Image.Image:
                   min(img.width, b[2] + pad * w), min(img.height, b[3] + pad * h)))
     s = size / max(c.size)
     return c.resize((max(1, int(c.width * s)), max(1, int(c.height * s))), Image.LANCZOS)
+
+
+def _tiles(img: Image.Image, b, size=448) -> list[Image.Image]:
+    """2x2 overlapping tiles (55% of the box each) of a region, each upscaled."""
+    x0, y0, x1, y1 = b
+    w, h = x1 - x0, y1 - y0
+    return [_crop(img, (x0 + fx * w, y0 + fy * h, x0 + (fx + 0.55) * w, y0 + (fy + 0.55) * h),
+                  pad=0.0, size=size) for fx in (0.0, 0.45) for fy in (0.0, 0.45)]
 
 
 def _lock(img: Image.Image, b, lock=None) -> Image.Image:
@@ -214,6 +228,14 @@ class Verifier:
                 elif kind == "desk":
                     box = self.desk_box(t)
                     img = _crop(img, box, pad=0.12, size=640) if box else apply_roi(img, self.roi)
+                elif kind == "desk_tiles":
+                    box = self.desk_box(t)
+                    if box is None:
+                        self.cache[f"{name}@{t}"] = 0.0
+                        continue
+                    for k, tile in enumerate(_tiles(img, box)):
+                        imgs.append(((t, k), tile))
+                    continue
                 else:
                     box = self.safe_box(t)
                     if box is None:
@@ -226,7 +248,11 @@ class Verifier:
                 imgs.append((t, img))
             if imgs:
                 p = self.vlm.yes_prob([i for _, i in imgs], [PROBES[name]])[:, 0]
-                for (t, _), v in zip(imgs, p):
-                    self.cache[f"{name}@{t}"] = round(float(v), 4)
+                best: dict[float, float] = {}
+                for (key, _), v in zip(imgs, p):
+                    t = key[0] if isinstance(key, tuple) else key  # tiles: max over tiles
+                    best[t] = max(best.get(t, 0.0), float(v))
+                for t, v in best.items():
+                    self.cache[f"{name}@{t}"] = round(v, 4)
             self._save()
         return max(self.cache[f"{name}@{t}"] for t in times) if times else 0.0

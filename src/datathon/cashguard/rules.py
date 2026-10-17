@@ -14,6 +14,7 @@ from .features import Features
 
 TH = {
     "stand_ratio": 1.3,       # standing box height / seated height
+    "seated_ratio": 1.3,      # "not standing" for the open-safe-while-seated rule (E028)
     "absence_min": 1.5,       # seconds without people to accept an exit
     "absence_sure": 3.0,      # ...or this long without people even with no posture cue
     "absence_end": 2.0,       # ...or until the video ends (short tail)
@@ -21,25 +22,28 @@ TH = {
     "valuables": 0.6,         # P(cash/bag/docs on desk) in the empty room
     "safe_open": 0.5,         # P(safe door open)
     "screen_lit": 0.12,       # fallback pixel heuristic (only if the laptop is not found)
-    "screen_app": 0.7,        # VLM on the laptop crop: violations 0.97-1.0, normals <=0.22       # lit fraction of the laptop box = active screen
+    "screen_app": 0.7,        # VLM on the laptop crop: violations 0.97-1.0, normals <=0.22
     "periodic": 0.6,          # personal items / food / phone
     "periodic_min_hits": 2,
-    "cash_next": 0.6,
+    "food_crop": 0.8,          # zoomed desk confirms food when the detector misses it...
+    "food_run": 3,             # ...only for a scene run of >= 3 consecutive samples (E026)
+    "cash_next": 0.6,          # cash on desk when the next visitor enters (2 of N frames)
     "entry_min_t": 5.0,
     "client_window": 18.0,     # seconds after a client enters that are checked for ID/cash
     "client_cash": 0.6,
-    "client_id": 0.5,         # cash on desk when the next visitor enters
+    "client_id": 0.5,
     "count_after_client": 0.5,
     "id_shown": 0.3,
     "counting": 0.5,
     "bag": 0.8,
+    "bag_confirm": 0.15,       # bag seen on one frame: neighbours real 0.25-0.3, confusions <=0.01 (E027)
     "desk_items": 0.3,
-    "desk_crop": 0.8,          # zoomed desk: violations >=0.95 on all frames, normals <=0.62         # targeted: anything left on the desk after the exit
+    "desk_crop": 0.8,          # zoomed desk after the exit: violations >=0.95, normals <=0.62
     "key_in_lock": 0.3,        # max over 4 post-exit lock crops (E005/E006: weak signal)
-    "safe_seated_samples": 3,
+    "safe_seated_samples": 2,  # open safe while seated: 2 VLM samples, confirmed on the safe crop
     "safe_open_long": 15.0,    # or stays open until the video ends
-    "det_support_min": 3,
-    "stranger_sec": 5.0,       # newcomer keeps standing this long (or until the video ends)      # detector frames with cup/bottle or handbag/backpack  # open safe while seated for >= 3 VLM samples (~4+ s)
+    "det_support_min": 3,      # detector frames with cup/bottle or handbag/backpack
+    "stranger_sec": 5.0,       # newcomer keeps standing this long (or until the video ends)
     "recount_min_sec": 10.0,  # opened bag must be recounted at least this long
 }
 
@@ -221,7 +225,7 @@ def rule_safe_open_seated(f: Features) -> list[Candidate]:
             m = np.abs(f.det_t - t) <= 0.5
             hh = h[m]
             hh = hh[~np.isnan(hh)]
-            if len(hh) and np.median(hh) < 1.15 * seated and f.timeline.count_at(t) >= 1:
+            if len(hh) and np.median(hh) < TH["seated_ratio"] * seated and f.timeline.count_at(t) >= 1:
                 seated_times.append(float(t))
         reaches_end = b >= len(is_open) - 1
         long_open = (f.vlm_t[b - 1] - f.vlm_t[a]) >= TH["safe_open_long"]
@@ -240,9 +244,10 @@ def rule_periodic(f: Features) -> list[Candidate]:
     # cards/banknotes with phones; detector support is required for the other two.
     support = _det_support(f)
     for code, key in (("personal_items", "personal_items"), ("food", "food")):
-        if support[code] < TH["det_support_min"]:
-            continue
         p = f.v(key).copy()
+        if support[code] < TH["det_support_min"] and not (
+                code == "food" and _food_on_desk_zoomed(f, p)):
+            continue
         if code == "personal_items":  # the green cash bag is not a personal item
             p[f.v("bag_on_desk") >= 0.5] = 0.0
         hits = np.where(p >= TH["periodic"])[0]
@@ -254,6 +259,23 @@ def rule_periodic(f: Features) -> list[Candidate]:
             out.append(Candidate(code, t, float(np.sort(p[hits])[-2]), ev,
                                  {"hits": len(hits), "span": [t, float(f.vlm_t[b - 1])]}))
     return out
+
+
+def _food_on_desk_zoomed(f: Features, p: np.ndarray) -> bool:
+    """Small cups/bottles vanish for the detector on a far camera: accept the scene answer
+    if it holds for a continuous run (an object lying there, not a card in a hand, Х-5)
+    and the zoomed desk agrees on 2 frames of that run."""
+    if f.probe is None:
+        return False
+    runs = _runs(p >= TH["periodic"])
+    if not runs:
+        return False
+    a, b = max(runs, key=lambda r: r[1] - r[0])
+    if b - a < TH["food_run"]:
+        return False
+    vals = sorted((f.probe("desk_food", [float(f.vlm_t[i])]) for i in range(a, min(b, a + 6))),
+                  reverse=True)
+    return len(vals) > 1 and vals[1] >= TH["food_crop"]
 
 
 def _det_support(f: Features) -> dict[str, int]:
@@ -299,8 +321,15 @@ def rule_client_flow(f: Features) -> list[Candidate]:
             continue
         prev = [t for t in exits if t < ti]
         if f.probe is not None:
-            pc = f.probe("cash", [round(max(0.0, ti - 1.0), 2), ti, round(ti + 1.5, 2),
-                                  round(min(f.duration - 0.1, ti + 3.0), 2)])
+            # state of the desk while the cashier is alone and as the visitor walks in:
+            # scene question + zoomed desk (small piles at the edge), per frame max,
+            # the 2nd highest frame must agree (single-frame confusions)
+            t0 = max(prev[-1] if prev else ti - 4.0, ti - 4.0, 0.0)
+            ts = sorted({round(t, 2) for t in np.arange(t0, ti, 1.5)} |
+                        {round(ti, 2), round(min(f.duration - 0.1, ti + 1.5), 2)})
+            vals = sorted((max(f.probe("cash", [t]), f.probe("desk_cash4", [t])) for t in ts),
+                          reverse=True)
+            pc = vals[1] if len(vals) > 1 else 0.0
         else:
             pc = f.vwin("cash_on_desk", ti - 1.0, ti + 3.0)
         if pc >= TH["cash_next"]:
@@ -335,7 +364,14 @@ def rule_cash_bag(f: Features) -> list[Candidate]:
             out.append(Candidate("no_courier_check", round(t, 2), 1.0 - pid, [tb, t],
                                  {"t_bag": tb, "t_courier_exit": leaves[0] if leaves else None}))
         return out
-    # cashier alone with an opened bag: cash taken out, then put away
+    # cashier alone with an opened bag: cash taken out, then put away. A bag seen on a
+    # single periodic frame must still be there 1-2 s later (one-frame confusions, Х-43
+    # with a perspective tilt), checked on neighbouring frames
+    bags = np.sort(f.v("bag_on_desk"))
+    single = len(bags) < 2 or bags[-2] < TH["bag"]
+    if (f.probe is not None and single and
+            f.probe("bag_seen", [max(0.0, tb - 1.0), tb + 1.0, tb + 2.0]) < TH["bag_confirm"]):
+        return out
     cash = f.v("cash_on_desk") >= 0.5
     after = np.where(cash & (f.vlm_t > tb))[0]
     if not len(after):
@@ -402,7 +438,9 @@ def rule_stranger(f: Features) -> list[Candidate]:
             nb = b
             total += 1
             standing += (b[3] - b[1]) >= TH["stand_ratio"] * seated
-        if total and standing / total >= 0.8 and tl.count_at(t_end - 0.3) >= 2:
+        m = (tl.t >= e.t + 1.0) & (tl.t <= t_end)
+        present = float(np.mean(tl.count[m] >= 2)) if m.any() else 0.0
+        if total and standing / total >= 0.8 and present >= 0.7:
             t = round(e.t + 1.0, 2)
             out.append(Candidate("stranger", t, standing / total, [t, round(t_end - 0.3, 2)],
                                  {"t_enter": e.t}))

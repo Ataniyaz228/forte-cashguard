@@ -1,6 +1,7 @@
 """Run the detector over every training video and cache results (local only)."""
 
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -8,7 +9,7 @@ from pathlib import Path
 from datathon.cashguard.detect import Detector
 from datathon.cashguard.video import probe, sample_frames
 
-VIDEOS = Path("data/raw/open/videos")
+VIDEOS = Path(os.environ.get("CASHGUARD_DEV_VIDEOS", "data/raw/open/videos"))
 OUT = Path(".build/cache/det")
 FPS = float(sys.argv[1]) if len(sys.argv) > 1 else 3.0
 

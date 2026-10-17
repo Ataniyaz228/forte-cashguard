@@ -7,12 +7,15 @@ the best-matching event, |timecode error|. Duplicates Х-47/Х-48 are skipped.
 import argparse
 import csv
 import json
+import os
 from pathlib import Path
 
 from datathon.cashguard.features import from_cache
 from datathon.cashguard.rules import run_rules
 
 ANN = Path("data/annotations/dev_types.csv")
+# transformed copies (scripts/robustness.py) are named "<video>__<variant>.mov"
+VIDEOS = Path(os.environ.get("CASHGUARD_DEV_VIDEOS", "data/raw/open/videos"))
 SKIP = {"Х-47", "Х-48"}
 
 
@@ -41,7 +44,11 @@ def main():
 
         vlm = SceneVLM(cfg=VLMConfig(max_pixels=464 * 848, batch=6))
     res = []
-    for v, a in ann.items():
+    items = list(ann.items())
+    if VIDEOS != Path("data/raw/open/videos"):
+        items = [(p.stem, ann[p.stem.split("__")[0]]) for p in sorted(VIDEOS.glob("*.mov"))
+                 if p.stem.split("__")[0] in ann]
+    for v, a in items:
         from datathon.cashguard.vlm import model_tag
 
         sfx = "" if model_tag() == "2b" else "_" + model_tag()
@@ -53,7 +60,7 @@ def main():
             from datathon.cashguard.verify import Verifier
 
             pdir = ("probe_roi" if args.roi else "probe") + sfx
-            ver = Verifier(vlm, Path(f"data/raw/open/videos/{v}.mov"),
+            ver = Verifier(vlm, VIDEOS / f"{v}.mov",
                            Path(f".build/cache/{pdir}/{v}.json"), roi=f.roi)
             f.probe, f.probe_series = ver, ver.series
         cands = run_rules(f)

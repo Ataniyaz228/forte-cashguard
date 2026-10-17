@@ -6,6 +6,7 @@
 """
 
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -17,7 +18,7 @@ from datathon.cashguard.verify import Verifier
 from datathon.cashguard.video import sample_frames
 from datathon.cashguard.vlm import PERIODIC_KEYS, SceneVLM, VLMConfig, model_tag
 
-VIDEOS = Path("data/raw/open/videos")
+VIDEOS = Path(os.environ.get("CASHGUARD_DEV_VIDEOS", "data/raw/open/videos"))
 ROI = "--roi" in sys.argv
 ARGS = [a for a in sys.argv[1:] if not a.startswith("--")]
 FPS = float(ARGS[0]) if ARGS else 0.5
