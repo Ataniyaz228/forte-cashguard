@@ -242,8 +242,11 @@ def rule_client_flow(f: Features) -> list[Candidate]:
     # ongoing recount from an idle counting machine (camera C), see docs/EXPERIMENTS.csv.
     out = []
     exits = client_exits(f)
-    for ti in visitor_entries(f):
-        # any later visitor entering while cash lies on the desk (not the opening scene)
+    alone_entries = [e.t for e in f.timeline.events
+                     if e.kind == "count_up" and e.before == 1]
+    for ti in alone_entries:
+        # the cashier is alone (previous visitor gone) and the next one walks in while cash
+        # still lies on the desk; 2->3 jumps are flicker, the opening scene is skipped
         if ti < TH["entry_min_t"]:
             continue
         prev = [t for t in exits if t < ti]

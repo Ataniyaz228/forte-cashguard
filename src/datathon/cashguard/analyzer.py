@@ -67,7 +67,7 @@ class Analyzer:
             flush()
         if not det_t:
             raise ValueError("не удалось декодировать кадры видео")
-        P = self.vlm.yes_prob(vlm_imgs, PERIODIC_KEYS)
+        P = self.vlm.yes_prob_shared(vlm_imgs, PERIODIC_KEYS)
         tl = build_timeline(det_t, dets, h, w, DET_FPS)
         return Features(path.stem, info.duration_sec or det_t[-1], w, h, DET_FPS,
                         np.asarray(det_t, float), dets, tl,

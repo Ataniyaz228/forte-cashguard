@@ -7,6 +7,8 @@ Transforms (ffmpeg, local only, outputs in .build/robust/):
   zoomin   - 80% centre crop upscaled (camera closer)
   zoomout  - shrunk to 70% and padded (camera farther / wider lens)
 Usage: python scripts/robustness.py [video ...]   (default: a balanced subset)
+Uses the running local service (http://127.0.0.1:8090, key from .env) so no second model
+copy is loaded on the GPU.
 """
 
 import csv
@@ -16,8 +18,11 @@ import sys
 import time
 from pathlib import Path
 
-from datathon.cashguard.analyzer import Analyzer
+import httpx
+
 from datathon.cashguard.config import settings
+
+BASE = "http://127.0.0.1:8090"
 
 V = Path("data/raw/open/videos")
 OUT = Path(".build/robust")
@@ -41,19 +46,32 @@ def transformed(video: str, name: str) -> Path:
     return dst
 
 
+def analyze_http(path: Path, key: str) -> dict:
+    with httpx.Client(timeout=120) as c, path.open("rb") as fh:
+        job = c.post(f"{BASE}/api/v1/analyze", headers={"X-API-Key": key},
+                     files={"file": (path.name, fh, "video/quicktime")}).json()["job_id"]
+        while True:
+            time.sleep(1.5)
+            # the UI route returns the extended result (type_code etc.)
+            body = c.get(f"{BASE}/ui/jobs/{job}").json()
+            if body["status"] != "processing":
+                return body
+
+
 def main():
     with open("data/annotations/dev_types.csv") as fh:
         ann = {r["video"]: r for r in csv.DictReader(fh)}
     videos = sys.argv[1:] or DEFAULT
-    an = Analyzer(settings)
+    key = settings.api_keys[0]
     rows = []
     for v in videos:
         a = ann[v]
         for name in ["orig", *FILTERS]:
             path = V / f"{v}.mov" if name == "orig" else transformed(v, name)
             t0 = time.time()
-            res = an(path)
-            codes = [(x["type_code"], x["timecode_sec"]) for x in res["violations"]]
+            res = analyze_http(path, key)
+            codes = [(x.get("type_code", x["type"]), x["timecode_sec"])
+                     for x in res.get("violations", [])]
             gt = a["label"] == "violation"
             ok_verdict = (res["verdict"] == "violation") == gt
             ok_type = not gt or a["type"] in {c for c, _ in codes}

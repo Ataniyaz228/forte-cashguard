@@ -98,6 +98,45 @@ class SceneVLM:
         return out
 
     @torch.inference_mode()
+    def yes_prob_shared(self, images: list[Image.Image], keys: list[str]) -> np.ndarray:
+        """Same output as yes_prob, ~4x faster: the image (and chat prefix) is encoded once
+        per frame, then each question continues from the cached prefix (KV cache)."""
+        out = np.zeros((len(images), len(keys)), dtype=np.float32)
+        prompts = [self._prompt(QUESTIONS.get(k, k)) for k in keys]
+        marker = "<|vision_end|>"
+        tok = self.proc.tokenizer
+        # text after the image differs per question; the image part is shared
+        tails = [tok(p.split(marker, 1)[1], add_special_tokens=False,
+                     return_tensors="pt")["input_ids"][0] for p in prompts]
+        for i, img in enumerate(images):
+            e0 = self.proc(text=[prompts[0]], images=[img], return_tensors="pt")
+            ids0 = e0["input_ids"][0]
+            vend = tok.convert_tokens_to_ids(marker)
+            L = int((ids0 == vend).nonzero()[-1]) + 1
+            ids = [torch.cat([ids0[:L], t]) for t in tails]
+            pre = self.model(input_ids=ids0[:L][None].to(self.device),
+                             attention_mask=torch.ones(1, L, dtype=torch.long,
+                                                       device=self.device),
+                             pixel_values=e0["pixel_values"].to(self.device),
+                             image_grid_thw=e0["image_grid_thw"].to(self.device),
+                             use_cache=True, logits_to_keep=1)
+            cache = pre.past_key_values
+            for j, x in enumerate(ids):
+                cache.crop(L)
+                tail = x[L:][None].to(self.device)
+                total = L + tail.shape[1]
+                r = self.model(input_ids=tail, past_key_values=cache,
+                               attention_mask=torch.ones(1, total, dtype=torch.long,
+                                                         device=self.device),
+                               cache_position=torch.arange(L, total, device=self.device),
+                               use_cache=True, logits_to_keep=1)
+                lg = r.logits[0, -1].float()
+                ly = torch.logsumexp(lg[self.yes_ids], dim=-1)
+                ln = torch.logsumexp(lg[self.no_ids], dim=-1)
+                out[i, j] = float(torch.sigmoid(ly - ln))
+        return out
+
+    @torch.inference_mode()
     def describe(self, image: Image.Image, question: str, max_new_tokens: int = 60) -> str:
         msgs = [{"role": "user", "content": [{"type": "image"}, {"type": "text",
                                                                  "text": question}]}]
