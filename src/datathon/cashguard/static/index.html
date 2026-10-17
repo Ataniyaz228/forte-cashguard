@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#4a0221">
 <title>CashGuard — видеоконтроль кассовой дисциплины</title>
 <link rel="stylesheet" href="/static/fonts/forte.css">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23a31551'/%3E%3Cpath d='M16 7l7 3v5.5c0 4.4-3 8.2-7 9.5-4-1.3-7-5.1-7-9.5V10z' fill='none' stroke='%23fff' stroke-width='2.2'/%3E%3Ccircle cx='16' cy='15' r='2.6' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="icon" href="/static/brand/forte-app.svg"><link rel="alternate icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23a31551'/%3E%3Cpath d='M16 7l7 3v5.5c0 4.4-3 8.2-7 9.5-4-1.3-7-5.1-7-9.5V10z' fill='none' stroke='%23fff' stroke-width='2.2'/%3E%3Ccircle cx='16' cy='15' r='2.6' fill='%23fff'/%3E%3C/svg%3E">
 <style>
 /* 1. TOKENS — Forte palette (public site), Open Sans */
 :root{
@@ -267,15 +267,109 @@ footer .wrap{display:flex;gap:20px;justify-content:space-between;flex-wrap:wrap}
   .upload .go{display:none}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ===== FORTE × CASHGUARD — brand layer ===== */
+body{background:#fff}
+.hdr .wrap{gap:14px}
+.brandlock{display:flex;align-items:center;gap:14px;text-decoration:none;color:var(--ink)}
+.brandlock img{height:26px;display:block}
+.brandlock .div{width:1px;height:28px;background:var(--line-2)}
+.brandlock b{font-size:17px;font-weight:800;letter-spacing:-.01em;display:block;line-height:1.1}
+.brandlock small{font-size:11.5px;color:var(--muted);font-weight:600;display:block}
+.page-hero{padding:22px 0 10px}
+.bento{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,.75fr);gap:16px}
+.panel{border-radius:32px;position:relative;overflow:hidden}
+.p-main{color:#fff;padding:44px 44px 40px;background:
+  radial-gradient(700px 420px at 100% 0%,rgba(226,32,111,.55),transparent 62%),
+  radial-gradient(520px 420px at 0% 100%,rgba(110,13,55,.9),transparent 70%),
+  linear-gradient(135deg,#5c0a2c,var(--brand) 60%,#c21a64)}
+.p-main::before{content:"";position:absolute;right:-120px;bottom:-160px;width:420px;height:420px;border-radius:50%;border:64px solid rgba(255,255,255,.06)}
+.p-main h1{font-size:clamp(34px,4.3vw,60px);line-height:1.02;font-weight:800;letter-spacing:-.035em;margin:18px 0 16px;max-width:720px}
+.p-main h1 em{font-style:normal;color:#ffc2da}
+.p-main .lead{max-width:560px}
+.upl{position:relative;z-index:1;margin-top:28px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(10px);border-radius:24px;padding:16px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center}
+.upl .dz2{display:flex;align-items:center;gap:14px;cursor:pointer;border-radius:16px;padding:12px;border:1.5px dashed rgba(255,255,255,.45);transition:background .15s,border-color .15s;min-width:0}
+.upl .dz2:hover,.upl .dz2.over{background:rgba(255,255,255,.12);border-color:#fff}
+.upl .dz2 input{display:none}
+.upl .dz2 .ic{width:46px;height:46px;border-radius:14px;background:#fff;color:var(--brand);display:grid;place-items:center;flex:none}
+.upl .dz2 b{display:block;font-size:15.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.upl .dz2 span{display:block;font-size:13px;color:rgba(255,255,255,.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btn-white{background:#fff;color:var(--brand);box-shadow:0 10px 24px -10px rgba(0,0,0,.45);height:56px;padding:0 26px}
+.btn-white:hover:not(:disabled){transform:translateY(-1px)}
+.btn-white:disabled{background:rgba(255,255,255,.55);color:rgba(110,13,55,.6);box-shadow:none;cursor:default}
+.p-main .fine{color:rgba(255,255,255,.72);margin-top:14px;position:relative;z-index:1}
+.p-art{background:linear-gradient(180deg,#fff,#fbeff4);border:1px solid var(--line);display:flex;align-items:flex-end;justify-content:flex-end;min-height:440px}
+.p-art img.safe{position:absolute;right:0;bottom:0;height:88%;max-width:92%;object-fit:contain;object-position:right bottom;mix-blend-mode:multiply}
+@keyframes float{50%{transform:translateY(-10px) rotate(-1.5deg)}}
+.toast{position:absolute;display:flex;gap:10px;align-items:center;background:#fff;border-radius:16px;padding:10px 14px 10px 10px;box-shadow:0 14px 30px -12px rgba(74,2,33,.35);font-size:13px;font-weight:600;max-width:260px;animation:pop2 .6s cubic-bezier(.2,1.4,.4,1) both}
+.toast i{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;flex:none;font-style:normal}
+.toast small{display:block;color:var(--muted);font-weight:600;font-size:11.5px;margin-top:1px}
+.toast.t1{top:34px;left:22px;animation-delay:.5s}.toast.t1 i{background:#fdecec;color:#c0262d}
+.toast.t2{top:46%;right:18px;animation-delay:1.1s}.toast.t2 i{background:var(--brand-50);color:var(--brand)}
+.toast.t3{bottom:30px;left:28px;animation-delay:1.7s}.toast.t3 i{background:var(--ok-50);color:var(--ok)}
+@keyframes pop2{from{opacity:0;transform:translateY(10px) scale(.92)}}
+.statrow{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:16px}
+.stat2{border-radius:24px;background:var(--bg);padding:20px 22px}
+.stat2 b{display:block;font-size:30px;font-weight:800;letter-spacing:-.03em;color:var(--brand)}
+.stat2 span{font-size:13.5px;color:var(--ink-2);font-weight:600}
+.howb{padding:64px 0 10px}
+.howgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.ht{border-radius:28px;background:var(--bg);padding:22px 22px 0;display:flex;flex-direction:column;overflow:hidden;min-height:300px}
+.ht .k{font-size:12.5px;font-weight:800;color:var(--brand);letter-spacing:.06em}
+.ht h4{margin:8px 0 6px;font-size:18px;font-weight:800;letter-spacing:-.01em}
+.ht p{margin:0;color:var(--muted);font-size:14px}
+.ht .art{margin-top:auto;display:flex;justify-content:center;padding-top:14px}
+.ht .art img{height:130px;max-width:100%;object-fit:contain}
+.ht .art.bleed{justify-content:flex-end;margin:0 -22px 0 0}
+.ht .art.bleed img{height:150px}
+.reg-grid > :last-child:nth-child(3n+1){grid-column:1/-1}
+@media (max-width:1024px){.reg-grid > :last-child:nth-child(3n+1){grid-column:auto}}
+.ht.dark{background:linear-gradient(160deg,#4a0221,#7a0f3e);color:#fff}
+.ht.dark p{color:rgba(255,255,255,.75)}.ht.dark .k{color:#ffc2da}
+.regb{padding:56px 0 64px}
+.sky{position:relative;border-radius:32px;overflow:hidden;min-height:300px;display:flex;align-items:flex-end;background:#2b7fbf url("/static/brand/sky.webp") center/cover no-repeat;margin-bottom:64px}
+.sky::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(74,2,33,.88),rgba(74,2,33,.45) 55%,transparent)}
+.sky .in{position:relative;padding:40px;color:#fff;max-width:620px}
+.sky img{height:30px;margin-bottom:18px}
+.sky h3{font-size:clamp(24px,3vw,36px);line-height:1.12;margin:0 0 10px;font-weight:800;letter-spacing:-.02em}
+.sky p{margin:0;color:rgba(255,255,255,.85)}
+.verdict{position:relative;overflow:hidden}
+.verdict .vart{position:absolute;right:0;bottom:-40px;width:190px;mix-blend-mode:multiply;opacity:.9;pointer-events:none}
+.verdict .kpis{margin-right:150px}
+@media (max-width:1024px){.verdict .kpis{margin-right:0}}
+.verdict > *:not(.vart){position:relative;z-index:1}
+.legal{font-size:11.5px;color:var(--muted-2);margin-top:8px}
+@media (max-width:1024px){
+  .bento{grid-template-columns:minmax(0,1fr)}
+  .p-art{min-height:360px}
+  .statrow,.howgrid{grid-template-columns:repeat(2,1fr)}
+}
+@media (max-width:640px){
+  .brandlock img{height:20px}.brandlock small{display:none}
+  .page-hero{padding-top:12px}
+  .panel{border-radius:24px}
+  .p-main{padding:26px 20px 24px}
+  .upl{grid-template-columns:minmax(0,1fr);padding:12px}
+  .upl .btn-white{display:none}
+  .toast{transform:scale(.9)}
+  .toast.t2{right:8px}
+  .statrow{grid-template-columns:repeat(2,1fr);gap:10px}
+  .stat2{padding:16px;border-radius:18px}.stat2 b{font-size:24px}
+  .howgrid{grid-template-columns:minmax(0,1fr)}
+  .ht{min-height:0}
+  .sky .in{padding:26px 20px}
+  .verdict .vart{width:150px;right:-40px;bottom:-50px;opacity:.5}
+}
 </style>
 </head>
 <body>
 <!-- 2. HEADER -->
 <header class="hdr">
   <div class="wrap">
-    <a class="logo" href="/" aria-label="CashGuard — на главную">
-      <span class="logo-mark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/><circle cx="12" cy="11" r="2.2" fill="#fff" stroke="none"/></svg></span>
-      <span><b>CashGuard</b><small>видеоконтроль кассы</small></span>
+    <a class="brandlock" href="/" aria-label="CashGuard — на главную">
+      <img src="/static/brand/forte-logo.svg" alt="ForteBank">
+      <span class="div"></span>
+      <span><b>CashGuard</b><small>видеоконтроль кассы · Datathon ’26</small></span>
     </a>
     <nav><a href="#how">Как работает</a><a href="#checks">Что проверяем</a></nav>
     <div class="sp"></div>
@@ -285,61 +379,65 @@ footer .wrap{display:flex;gap:20px;justify-content:space-between;flex-wrap:wrap}
 
 <main>
 <section id="idle">
-  <!-- 3. HERO + UPLOAD -->
-  <div class="hero">
-    <div class="wrap">
-      <div class="reveal">
-        <span class="tag"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/></svg>Кейс ForteBank · Datathon ’26</span>
-        <h1>Проверка кассовой дисциплины <span>по видеозаписи</span> за минуты</h1>
-        <p class="lead">Загрузите запись с камеры кассы. Сервис найдёт видимые признаки нарушений, покажет точный момент, кадры-доказательства и пункт правил НБРК для каждого события.</p>
-        <div class="pts">
-          <div class="pt"><i><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg></i>Видео не покидает сервер</div>
-          <div class="pt"><i><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h9l4 4v14H6z"/><path d="M9 13h7M9 17h5"/></svg></i>Нормы РК с пунктами</div>
-          <div class="pt"><i><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></i>Решение за человеком</div>
+  <div class="wrap page-hero">
+    <div class="bento">
+      <!-- hero: headline + upload -->
+      <div class="panel p-main reveal">
+        <span class="tag"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/></svg>Кейс ForteBank · кассовая дисциплина</span>
+        <h1>Видео кассы <em>→</em> нарушения с&nbsp;доказательствами</h1>
+        <p class="lead">Загрузите запись с камеры. Сервис найдёт видимые признаки нарушений и покажет момент, кадры и пункт правил НБРК — проверяющему остаётся подтвердить.</p>
+        <div class="upl">
+          <label class="dz2" id="drop">
+            <input type="file" id="file" accept=".mov,.mp4,video/quicktime,video/*">
+            <span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4"/><path d="M7 9l5-5 5 5"/><path d="M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3"/></svg></span>
+            <span style="min-width:0"><b id="dzTitle">Выберите или перетащите видео</b><span id="dzSub">.mov или .mp4 · до 300 МБ</span></span>
+          </label>
+          <button class="btn btn-white" id="go" disabled>Проверить →</button>
         </div>
-      </div>
-      <div class="upload reveal" style="animation-delay:.08s">
-        <h3>Новая проверка</h3>
-        <p class="hint">Формат .mov или .mp4, до 300 МБ</p>
-        <label class="dz" id="drop">
-          <input type="file" id="file" accept=".mov,.mp4,video/quicktime,video/*">
-          <div class="ic"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4"/><path d="M7 9l5-5 5 5"/><path d="M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3"/></svg></div>
-          <b>Перетащите видео сюда</b><span>или нажмите, чтобы выбрать файл</span>
-        </label>
-        <div class="filecard hidden" id="filecard">
-          <div class="fi"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="13" height="14" rx="2"/><path d="M16 10l5-3v10l-5-3"/></svg></div>
-          <div style="min-width:0"><b id="fname"></b><small id="fsize"></small></div>
-          <button class="x" id="fclear" aria-label="Убрать файл">✕</button>
-        </div>
-        <button class="btn btn-primary go" id="go" disabled>Начать проверку</button>
         <div class="fine"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex:none;margin-top:1px"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>Результат — подсказка для проверяющего, а не юридическое заключение. Звук и лица не анализируются.</div>
       </div>
+      <!-- art: Forte 3D safe + product toasts -->
+      <div class="panel p-art reveal" style="animation-delay:.1s" aria-hidden="true">
+        <img class="safe" src="/static/brand/safe.webp" alt="">
+        <div class="toast t1"><i>!</i><div>Сейф оставлен открытым<small>событие · 0:06.0</small></div></div>
+        <div class="toast t2"><i>§</i><div>НБРК № 231, п. 20<small>основание</small></div></div>
+        <div class="toast t3"><i>✓</i><div>Кадры-доказательства<small>3 кадра · рамки объектов</small></div></div>
+      </div>
+    </div>
+    <div class="statrow">
+      <div class="stat2 reveal" style="animation-delay:.15s"><b>0 байт</b><span>видео уходит в облачные AI-сервисы</span></div>
+      <div class="stat2 reveal" style="animation-delay:.2s"><b id="nTypes">10</b><span>типов нарушений с пунктами норм РК</span></div>
+      <div class="stat2 reveal" style="animation-delay:.25s"><b>≤ 5 мин</b><span>на видео даже при пачке запросов</span></div>
+      <div class="stat2 reveal" style="animation-delay:.3s"><b>1–3</b><span>кадра-доказательства на событие</span></div>
     </div>
   </div>
 
-  <!-- 4. HOW IT WORKS -->
-  <div class="wrap how" id="how">
+  <div class="wrap howb" id="how">
     <div class="eyebrow">Как это работает</div>
     <h2 class="sec">От записи до отчёта — четыре шага</h2>
     <p class="sub">Все модели выполняются на нашем сервере. Ни видео, ни кадры, ни описания не передаются во внешние сервисы.</p>
-    <div class="steps4">
-      <div class="card st"><div class="n">1</div><h4>Люди и перемещения</h4><p>Детектор находит людей, отсеивает отражения за стеклом, фиксирует приход и уход.</p></div>
-      <div class="card st"><div class="n">2</div><h4>Состояние сцены</h4><p>Визуально-языковая модель смотрит на сейф, стол, ценности и сумку инкассации.</p></div>
-      <div class="card st"><div class="n">3</div><h4>Точечные проверки</h4><p>В ключевые моменты — увеличенные фрагменты: замок сейфа, стол после ухода.</p></div>
-      <div class="card st"><div class="n">4</div><h4>Отчёт с основанием</h4><p>Таймкод, кадры, что видно и почему это важно, пункт правил НБРК.</p></div>
+    <div class="howgrid">
+      <div class="ht"><span class="k">ШАГ 1</span><h4>Люди и перемещения</h4><p>Детектор находит людей, отсеивает отражения за стеклом, фиксирует приход и уход.</p><div class="art bleed"><img src="/static/brand/coins.webp" alt="" style="mix-blend-mode:multiply"></div></div>
+      <div class="ht"><span class="k">ШАГ 2</span><h4>Состояние сцены</h4><p>Визуально-языковая модель смотрит на сейф, стол, ценности и сумку инкассации.</p><div class="art"><img src="/static/brand/magnifier.webp" alt=""></div></div>
+      <div class="ht"><span class="k">ШАГ 3</span><h4>Точечные проверки</h4><p>В ключевые моменты — увеличенные фрагменты: замок сейфа, стол после ухода.</p><div class="art"><img src="/static/brand/percent.webp" alt=""></div></div>
+      <div class="ht dark"><span class="k">ШАГ 4</span><h4>Отчёт с основанием</h4><p>Таймкод, кадры, что видно и почему это важно, пункт правил НБРК.</p><div class="art"><img src="/static/brand/chat.webp" alt=""></div></div>
     </div>
   </div>
 
-  <!-- 5. REGISTER -->
-  <div class="wrap reg" id="checks">
+  <div class="wrap regb" id="checks">
     <div class="eyebrow">Что проверяем</div>
     <h2 class="sec">Типы нарушений и нормативные основания</h2>
     <p class="sub">Тексты норм сверены с ИПС «Әділет». Сервис сообщает только о том, что видно на записи: проводки, сверки и подлинность купюр по видео не оцениваются.</p>
     <div class="reg-grid" id="reg"></div>
-    <div class="trust">
-      <div class="card tr"><div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg></div><div><b>Полностью локально</b><span>Модели внутри сервиса, без облачных AI-API</span></div></div>
-      <div class="card tr"><div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></div><div><b>Видео не хранится</b><span>Файл удаляется сразу после анализа</span></div></div>
-      <div class="card tr"><div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg></div><div><b>Проверяемо</b><span>Каждое событие — с кадром, таймкодом и нормой</span></div></div>
+  </div>
+
+  <div class="wrap">
+    <div class="sky">
+      <div class="in">
+        <img src="/static/brand/forte-logo-white.svg" alt="ForteBank">
+        <h3>Решение остаётся за человеком</h3>
+        <p>CashGuard экономит часы просмотра записей: проверяющий сразу видит момент, кадр и норму — и сам принимает решение.</p>
+      </div>
     </div>
   </div>
 </section>
@@ -387,8 +485,8 @@ footer .wrap{display:flex;gap:20px;justify-content:space-between;flex-wrap:wrap}
 </main>
 
 <!-- 10. FOOTER -->
-<footer><div class="wrap"><span>CashGuard · проект команды для кейса ForteBank, Datathon ’26</span><span>Основания: Постановления Правления НБРК № 231 (29.11.2019) и № 14 (24.02.2020)</span></div></footer>
-<div class="mbar" id="mbar"><button class="btn btn-primary" id="mgo" disabled>Начать проверку</button></div>
+<footer><div class="wrap"><span>CashGuard · проект команды для кейса ForteBank, Datathon ’26<br><span class="legal">Логотип и 3D-иллюстрации — ForteBank, используются в рамках кейса хакатона. Сервис не является официальным продуктом банка.</span></span><span>Основания: Постановления Правления НБРК № 231 (29.11.2019) и № 14 (24.02.2020)</span></div></footer>
+<div class="mbar" id="mbar"><button class="btn btn-primary" id="mgo" disabled>Проверить видео →</button></div>
 <div class="tip" id="tip"></div>
 <div class="lb" id="lb"><button class="nav prev" id="lbPrev" aria-label="Предыдущий кадр">‹</button><div class="box"><div style="position:relative" id="lbBox"></div><div class="cap" id="lbCap"></div></div><button class="nav next" id="lbNext" aria-label="Следующий кадр">›</button></div>
 
@@ -424,6 +522,7 @@ let file = null, timer = null, started = 0, R = null, lb = [], lbI = 0;
 
 /* 5. register */
 fetch("/ui/types").then(r => r.json()).then(list => {
+  $("nTypes").textContent = list.length;
   $("reg").innerHTML = list.map(t => `<div class="card rc"><div class="top"><div class="ic">${icon(t.code, 22)}</div><h4>${esc(t.name)}</h4></div>
     <p>${esc(cap(t.why))}.</p><div class="chips">${t.rules.map(r => `<span class="chip">${esc(short(r.title))}, ${esc(r.clause)}</span>`).join("")}</div></div>`).join("");
 }).catch(() => {});
@@ -434,13 +533,13 @@ const drop = $("drop");
 ["dragleave","drop"].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.remove("over"); }));
 drop.addEventListener("drop", ev => ev.dataTransfer.files.length && pick(ev.dataTransfer.files[0]));
 $("file").addEventListener("change", ev => ev.target.files.length && pick(ev.target.files[0]));
-function pick(f) { file = f; $("fname").textContent = f.name; $("fsize").textContent = `${(f.size / 1048576).toFixed(1)} МБ`;
-  $("filecard").classList.remove("hidden"); drop.classList.add("hidden"); $("go").disabled = $("mgo").disabled = false; }
-$("fclear").onclick = () => { file = null; $("file").value = ""; $("filecard").classList.add("hidden"); drop.classList.remove("hidden"); $("go").disabled = $("mgo").disabled = true; };
+function pick(f) { file = f; $("dzTitle").textContent = f.name; $("dzSub").textContent = `${(f.size / 1048576).toFixed(1)} МБ · нажмите, чтобы заменить`;
+  $("go").disabled = $("mgo").disabled = false; }
+function clearFile() { file = null; $("file").value = ""; $("dzTitle").textContent = "Выберите или перетащите видео"; $("dzSub").textContent = ".mov или .mp4 · до 300 МБ"; $("go").disabled = $("mgo").disabled = true; }
 $("go").onclick = $("mgo").onclick = () => start();
 function show(id) { ["idle","proc","res"].forEach(s => $(s).classList.toggle("hidden", s !== id));
   document.body.classList.toggle("has-mbar", id === "idle"); $("mbar").classList.toggle("hidden", id !== "idle"); window.scrollTo({top: 0}); }
-$("again").onclick = () => { clearInterval(timer); history.replaceState(null, "", location.pathname); $("fclear").click(); show("idle"); };
+$("again").onclick = () => { clearInterval(timer); history.replaceState(null, "", location.pathname); clearFile(); show("idle"); };
 show("idle");
 
 /* 6. processing */
@@ -488,7 +587,7 @@ function split(d) { const a = d.split(" Почему это может быть 
 function render(j) {
   R = j; const v = j.violations || [], dur = j.video?.duration_sec || 0, bad = v.length > 0;
   $("verdict").className = "verdict reveal " + (bad ? "bad" : "ok");
-  $("verdict").innerHTML = `<div class="vi">${bad
+  $("verdict").innerHTML = `${bad ? '<img class="vart" src="/static/brand/safe.webp" alt="">' : ""}<div class="vi">${bad
     ? '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h.01"/></svg>'
     : '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg>'}</div>
     <div><h2>${bad ? "Обнаружены признаки возможных нарушений" : "Нарушение не обнаружено"}</h2>
