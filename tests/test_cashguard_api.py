@@ -72,7 +72,7 @@ def test_contract_roundtrip(client, sample_mov):
 def test_bad_files(client):
     h = {"X-API-Key": KEY}
     r = client.post("/api/v1/analyze", headers=h, files={"file": ("x.txt", b"hello", "text/plain")})
-    assert r.status_code == 415
+    assert r.status_code == 400
     r = client.post("/api/v1/analyze", headers=h,
                     files={"file": ("x.mov", b"not a video at all", "video/quicktime")})
     assert r.status_code == 400
@@ -101,3 +101,10 @@ def test_ui_routes_without_key(client, sample_mov):
     body = wait_done(client, r.json()["job_id"], {}, url="/ui/jobs/").json()
     assert body["status"] == "done" and body["summary"] == "s"
     assert client.get("/").status_code == 200
+
+
+def test_any_extension_accepted(client, sample_mov):
+    h = {"X-API-Key": KEY}
+    for name in ("video", "clip.MP4", "cam.bin"):
+        r = client.post("/api/v1/analyze", headers=h, files={"file": (name, sample_mov.read_bytes())})
+        assert r.status_code == 200, name

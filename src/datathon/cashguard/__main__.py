@@ -3,6 +3,7 @@
 import argparse
 import json
 import logging
+import os
 import time
 from pathlib import Path
 
@@ -20,6 +21,8 @@ def main():
     args = ap.parse_args()
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    # weights are downloaded once; analysis must not need the internet (§7 of the brief)
+    os.environ.setdefault("HF_HUB_OFFLINE", "1")
     if args.cmd == "serve":
         import uvicorn
 

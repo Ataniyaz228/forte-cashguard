@@ -14,7 +14,7 @@ from .video import VideoError, probe
 
 log = logging.getLogger("cashguard")
 STATIC = Path(__file__).parent / "static"
-ALLOWED_SUFFIXES = {".mov", ".mp4", ".m4v", ".qt", ".avi", ".mkv"}
+KNOWN_SUFFIXES = {".mov", ".mp4", ".m4v", ".qt", ".avi", ".mkv", ".webm", ".mts", ".m2ts"}
 PUBLIC_FIELDS = ("job_id", "status", "verdict", "violations")
 
 
@@ -50,9 +50,10 @@ def create_app(cfg: Settings = settings, analyzer=None) -> FastAPI:
 
     async def accept_upload(file: UploadFile, source: str) -> dict:
         name = file.filename or "video.mov"
+        # any name/extension is accepted: the decoder decides whether it is a video
         suffix = Path(name).suffix.lower()
-        if suffix not in ALLOWED_SUFFIXES:
-            raise HTTPException(415, f"ожидается видео .mov, получено '{suffix or name}'")
+        if suffix not in KNOWN_SUFFIXES:
+            suffix = ".mov"
         job_id, path = store.new_upload_path(suffix)
         limit = cfg.max_upload_mb * 1024 * 1024
         size = 0
@@ -66,8 +67,9 @@ def create_app(cfg: Settings = settings, analyzer=None) -> FastAPI:
             if size == 0:
                 raise HTTPException(400, "пустой файл")
             info = probe(path)
-            if info.duration_sec > cfg.max_duration_sec:
-                raise HTTPException(400, f"видео длиннее {cfg.max_duration_sec:.0f} с")
+            limit_sec = cfg.max_duration_sec if source == "api" else cfg.ui_max_duration_sec
+            if info.duration_sec > limit_sec:
+                raise HTTPException(400, f"видео длиннее {limit_sec:.0f} с")
         except VideoError as e:
             path.unlink(missing_ok=True)
             raise HTTPException(400, str(e)) from e

@@ -18,6 +18,8 @@ class Settings:
     work_dir: Path = Path(os.environ.get("CASHGUARD_WORK_DIR", ".build/cashguard"))
     max_upload_mb: int = int(os.environ.get("CASHGUARD_MAX_UPLOAD_MB", "300"))
     max_duration_sec: float = float(os.environ.get("CASHGUARD_MAX_DURATION_SEC", "900"))
+    # UI uploads share the GPU with the jury API: keep them short
+    ui_max_duration_sec: float = float(os.environ.get("CASHGUARD_UI_MAX_DURATION_SEC", "180"))
     workers: int = int(os.environ.get("CASHGUARD_WORKERS", "1"))
     result_ttl_hours: float = float(os.environ.get("CASHGUARD_RESULT_TTL_HOURS", "72"))
     # "full" runs every model; "stub" only decodes video (tests, smoke checks)
