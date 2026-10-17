@@ -61,10 +61,11 @@ def ghost_votes(d, stats: PeopleStats | None, height: int, width: int) -> int:
     votes = int(bw < min_w or bh < min_h) + int(score < 0.8)
     look = d[3] if len(d) > 3 else None
     if look and stats is not None:
-        if stats.sat:
-            votes += int(look["sat"] < 0.5 * stats.sat)
-        if stats.sharp:
-            votes += int(look["sharp"] < 0.75 * stats.sharp)
+        # appearance (washed-out colours, blur) is one cue in total: darker footage or
+        # dark clothes lower both at once, so alone it never removes a large, confident box
+        dull = (stats.sat and look["sat"] < 0.5 * stats.sat) or (
+            stats.sharp and look["sharp"] < 0.75 * stats.sharp)
+        votes += int(bool(dull))
     elif look is None:
         votes += int(bw < min_w)  # no appearance data: fall back to the size rule
     return votes

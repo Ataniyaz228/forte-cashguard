@@ -417,10 +417,16 @@ def rule_stranger(f: Features) -> list[Candidate]:
     for e in tl.events:
         if e.kind != "count_up" or e.before < 1:
             continue
-        i = int(np.argmin(np.abs(f.det_t - e.t)))
-        prev = [b for k in range(max(0, i - 3), i) for b in tl.boxes[k]]
+        i0 = int(np.argmin(np.abs(f.det_t - e.t)))
+        # first sample within 1 s where both people are detected (single-frame dropouts)
+        both = [k for k in range(i0, len(f.det_t))
+                if f.det_t[k] <= e.t + 1.0 and len(tl.boxes[k]) >= 2]
+        if not both:
+            continue
+        i = both[0]
+        prev = [b for k in range(max(0, i0 - 3), i0) for b in tl.boxes[k]]
         cur = tl.boxes[i]
-        if not prev or len(cur) < 2:
+        if not prev:
             continue
         # newcomer = current box farthest from every box seen just before
         nb = max(cur, key=lambda b, prev=prev: _min_dist(b, prev))
