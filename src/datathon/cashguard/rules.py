@@ -6,6 +6,7 @@ kept in one place (TH) so it can be re-tuned without touching the logic.
 
 import os
 from dataclasses import dataclass, field
+from itertools import pairwise
 
 import numpy as np
 
@@ -14,10 +15,13 @@ from .features import Features
 TH = {
     "stand_ratio": 1.3,       # standing box height / seated height
     "absence_min": 1.5,       # seconds without people to accept an exit
+    "absence_sure": 3.0,      # ...or this long without people even with no posture cue
+    "absence_end": 2.0,       # ...or until the video ends (short tail)
     "post_exit": 4.5,         # seconds after exit inspected for left-behind objects
     "valuables": 0.6,         # P(cash/bag/docs on desk) in the empty room
     "safe_open": 0.5,         # P(safe door open)
-    "screen_lit": 0.12,       # lit fraction of the laptop box = active screen
+    "screen_lit": 0.12,       # fallback pixel heuristic (only if the laptop is not found)
+    "screen_app": 0.7,        # VLM on the laptop crop: violations 0.97-1.0, normals <=0.22       # lit fraction of the laptop box = active screen
     "periodic": 0.6,          # personal items / food / phone
     "periodic_min_hits": 2,
     "cash_next": 0.6,
@@ -80,11 +84,15 @@ def departures(f: Features) -> list[Departure]:
         back = later[0] if later else f.duration
         if back - e.t < TH["absence_min"] and back < f.duration - 0.5:
             continue
-        # the person must be standing right before disappearing (not bending behind the desk)
+        # evidence of really leaving: standing up right before disappearing (camera-dependent
+        # box height ratio) OR staying out of the room for long (camera-independent)
         m = (f.det_t >= e.t - 2.0) & (f.det_t <= e.t)
         hh = h[m]
         hh = hh[~np.isnan(hh)]
-        if seated and (not len(hh) or hh.max() < TH["stand_ratio"] * seated):
+        stood = not seated or (len(hh) > 0 and hh.max() >= TH["stand_ratio"] * seated)
+        long_gone = (back - e.t) >= TH["absence_sure"] or (
+            back >= f.duration - 0.5 and back - e.t >= TH["absence_end"])
+        if not (stood or long_gone):
             continue
         # someone must have been in the room for a while (not a person just walking in)
         first_seen = f.det_t[np.argmax(tl.count > 0)] if (tl.count > 0).any() else e.t
@@ -100,13 +108,25 @@ def departures(f: Features) -> list[Departure]:
                 break
         # labels mark the moment the cashier leaves the workplace: right after standing up
         # if she walks straight out, otherwise ~3 s before she disappears through the door
-        if e.t - stand_t <= 8.0:
+        if not stood:  # no posture cue: the cashier leaves the workplace ~2 s before the exit
+            depart = e.t - 2.0
+        elif e.t - stand_t <= 8.0:
             depart = min(stand_t + 1.5, e.t)
         else:
             depart = e.t - 3.0
         out.append(Departure(e.t, round(float(depart), 2), back))
     return out
 
+
+
+def _close_gaps(mask: np.ndarray, gap: int = 1) -> np.ndarray:
+    """Fill runs of up to `gap` False samples that sit between True samples."""
+    m = mask.copy()
+    idx = np.where(mask)[0]
+    for a, b in pairwise(idx):
+        if 1 < b - a <= gap + 1:
+            m[a:b] = True
+    return m
 
 
 def _runs(mask: np.ndarray) -> list[tuple[int, int]]:
@@ -167,11 +187,21 @@ def rule_departures(f: Features) -> list[Candidate]:
             if p_key >= TH["key_in_lock"]:
                 out.append(Candidate("key_in_safe", d.t_depart, p_key, ev,
                                      {"t_exit": d.t_exit}))
+        # screen left unlocked: the VLM reads the zoomed laptop screen (open program vs lock
+        # screen / wallpaper / off), two frames needed (E022). The pixel colour heuristic is
+        # only a fallback when the laptop cannot be located at all.
         scr = f.screen_win(d.t_exit, min(d.t_back, d.t_exit + 3.0))
-        if scr is not None and scr >= TH["screen_lit"]:
+        app_vals = (sorted((f.probe("screen_app", [t]) for t in probe_t), reverse=True)
+                    if f.probe is not None else [])
+        p_app = app_vals[1] if len(app_vals) > 1 else 0.0
+        laptop_found = getattr(f.probe, "_laptop_box", None) not in (None, "unset")
+        unlocked = p_app >= TH["screen_app"] or (
+            not laptop_found and scr is not None and scr >= TH["screen_lit"])
+        if unlocked:
             out.append(Candidate("screen_unlocked", d.t_depart,
-                                 min(1.0, 0.5 + scr), ev, {"t_exit": d.t_exit,
-                                                           "screen": round(scr, 3)}))
+                                 max(p_app, min(1.0, 0.5 + (scr or 0.0))), ev,
+                                 {"t_exit": d.t_exit, "screen": round(scr or 0.0, 3),
+                                  "screen_vlm": round(p_app, 3)}))
     return out
 
 
@@ -181,7 +211,8 @@ def rule_safe_open_seated(f: Features) -> list[Candidate]:
     seated = _seated_height(f)
     if not seated:
         return []
-    is_open = f.v("safe_open") >= TH["safe_open"]
+    # one missed sample inside a run does not break it (VLM answers flicker on single frames)
+    is_open = _close_gaps(f.v("safe_open") >= TH["safe_open"])
     out = []
     for a, b in _runs(is_open):
         times = f.vlm_t[a:b]
@@ -424,13 +455,13 @@ def run_rules(f: Features) -> list[Candidate]:
 
 
 def merge(cands: list[Candidate], gap: float = 4.0) -> list[Candidate]:
-    """One event per type within `gap` seconds; keep the strongest."""
+    """One event per type within `gap` seconds: earliest time, highest confidence."""
     cands = sorted(cands, key=lambda c: (c.code, c.t))
     out: list[Candidate] = []
     for c in cands:
         if out and out[-1].code == c.code and c.t - out[-1].t <= gap:
-            if c.score > out[-1].score:
-                out[-1] = c
+            # same event seen again: keep the earliest moment (when it becomes visible)
+            out[-1].score = max(out[-1].score, c.score)
             continue
         out.append(c)
     return sorted(out, key=lambda c: c.t)
