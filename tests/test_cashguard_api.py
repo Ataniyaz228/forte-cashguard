@@ -108,3 +108,11 @@ def test_any_extension_accepted(client, sample_mov):
     for name in ("video", "clip.MP4", "cam.bin"):
         r = client.post("/api/v1/analyze", headers=h, files={"file": (name, sample_mov.read_bytes())})
         assert r.status_code == 200, name
+
+
+def test_api_jobs_not_readable_via_ui(client, sample_mov):
+    h = {"X-API-Key": KEY}
+    job_id = client.post("/api/v1/analyze", headers=h,
+                         files={"file": ("v.mov", sample_mov.read_bytes())}).json()["job_id"]
+    wait_done(client, job_id, h)
+    assert client.get("/ui/jobs/" + job_id).status_code == 404

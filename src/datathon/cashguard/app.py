@@ -103,7 +103,8 @@ def create_app(cfg: Settings = settings, analyzer=None) -> FastAPI:
     @app.get("/ui/jobs/{job_id}")
     def ui_job(job_id: str):
         job = store.get(job_id)
-        if not job:
+        # API jobs are readable only with the key (/api/v1/jobs), never via the public UI
+        if not job or job.get("_source") != "ui":
             raise HTTPException(404, "задача не найдена")
         out = public_view(job, extended=True)
         out["queue_position"] = store.queue_position(job_id)
