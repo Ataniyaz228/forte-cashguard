@@ -310,7 +310,7 @@ body{background:#fff}
 .btn-white:disabled{background:rgba(255,255,255,.55);color:rgba(110,13,55,.6);box-shadow:none;cursor:default}
 .p-main .fine{color:rgba(255,255,255,.72);margin-top:14px;position:relative;z-index:1}
 .p-art{background:linear-gradient(180deg,#fff,#fbeff4);border:1px solid var(--line);display:flex;align-items:flex-end;justify-content:flex-end;min-height:440px}
-.p-art img.safe{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:right bottom;mix-blend-mode:multiply}
+.p-art img.safe{position:absolute;right:0;bottom:0;height:94%;width:auto;max-width:100%;object-fit:contain;object-position:right bottom;mix-blend-mode:multiply}
 @keyframes float{50%{transform:translateY(-10px) rotate(-1.5deg)}}
 .toast{position:absolute;display:flex;gap:10px;align-items:center;background:#fff;border-radius:16px;padding:10px 14px 10px 10px;box-shadow:0 14px 30px -12px rgba(74,2,33,.35);font-size:13px;font-weight:600;max-width:260px;animation:pop2 .6s cubic-bezier(.2,1.4,.4,1) both}
 .toast i{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;flex:none;font-style:normal}
@@ -412,7 +412,7 @@ body{background:#fff}
   .toast i{width:28px;height:28px;border-radius:9px}
   .toast.t1{top:14px;left:12px}.toast.t2{top:auto;bottom:14px;right:12px}.toast.t3{display:none}
   .p-art{min-height:220px;max-height:220px}
-  .p-art img.safe{object-position:60% 38%}
+  .p-art img.safe{height:135%;bottom:-22%;right:-2%}
   .statrow{margin-top:12px}
   .sky{min-height:0;margin-top:28px;margin-bottom:28px;border-radius:24px;background-position:72% center}
   .sky::before{background:linear-gradient(180deg,rgba(74,2,33,.25),rgba(74,2,33,.92) 55%)}
@@ -443,7 +443,7 @@ body{background:#fff}
 .stat2 b,.stat2 span{position:relative;z-index:1;display:block;max-width:68%}
 .s3d{position:absolute;right:-8px;bottom:-10px;height:92px;width:auto;pointer-events:none;transition:transform .3s}
 .s3d-f{height:58px;right:14px;bottom:14px;border-radius:14px;box-shadow:0 10px 22px -10px rgba(74,2,33,.6)}
-.s3d-v{height:96px;right:12px;bottom:6px}
+.s3d-v{height:82px;right:10px;bottom:10px}
 .stat2:hover .s3d{transform:translateY(-4px) rotate(-3deg)}
 .pcard{position:relative;overflow:hidden}
 .pcard-art{position:absolute;right:-10px;top:-6px;height:130px;opacity:.95;pointer-events:none}
@@ -499,8 +499,6 @@ body{background:#fff}
       <!-- art: Forte 3D safe + product toasts -->
       <div class="panel p-art reveal" style="animation-delay:.1s" aria-hidden="true">
         <img class="safe" src="/static/brand/safe.webp" alt="">
-        <div class="toast t1"><i>!</i><div>Сейф оставлен открытым<small>событие · 0:06.0</small></div></div>
-        <div class="toast t2"><i>§</i><div>НБРК № 231, п. 20<small>основание</small></div></div>
       </div>
     </div>
     <div class="statrow">
