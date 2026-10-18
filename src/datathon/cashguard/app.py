@@ -94,6 +94,10 @@ def create_app(cfg: Settings = settings, analyzer=None) -> FastAPI:
     # UI routes: the customer's reviewer needs no key (FAQ 27), jury API stays keyed.
     @app.post("/ui/analyze")
     async def ui_analyze(file: UploadFile = File(...)):  # noqa: B008 - FastAPI idiom
+        # the public page shares the GPU with the jury API: no UI uploads behind a long queue
+        if store.processing() >= cfg.workers + 1:
+            raise HTTPException(429, "Сервер сейчас занят проверкой записей, попробуйте "
+                                     "через минуту")
         return JSONResponse(await accept_upload(file, "ui"), status_code=200)
 
     @app.get("/ui/jobs/{job_id}")

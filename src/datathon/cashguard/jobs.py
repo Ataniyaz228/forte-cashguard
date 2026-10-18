@@ -69,8 +69,11 @@ class JobStore:
     def _run(self, job_id: str, video: Path) -> None:
         t0 = time.time()
         try:
-            if "progress" in inspect.signature(self.analyzer).parameters:
-                result = self.analyzer(video, progress=lambda st, fr: self._progress(job_id, st, fr))
+            params = inspect.signature(self.analyzer).parameters
+            if "progress" in params:
+                kw = {"waited": t0 - self.jobs[job_id]["_created"]} if "waited" in params else {}
+                result = self.analyzer(video, progress=lambda st, fr: self._progress(job_id, st, fr),
+                                       **kw)
             else:
                 result = self.analyzer(video)
             update = {"status": "done", **result}
@@ -97,6 +100,10 @@ class JobStore:
         with self.lock:
             job = self.jobs.get(job_id)
             return dict(job) if job else None
+
+    def processing(self) -> int:
+        with self.lock:
+            return sum(j["status"] == "processing" for j in self.jobs.values())
 
     def queue_position(self, job_id: str) -> int:
         with self.lock:

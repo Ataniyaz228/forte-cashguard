@@ -53,7 +53,7 @@ TH = {
 # types the active rules can report (UI catalogue, docs); the rest are documented limits
 REPORTED_TYPES = ("safe_open", "key_in_safe", "valuables_unattended", "screen_unlocked",
                   "cash_exposed_next_client", "no_courier_check", "no_recount", "stranger",
-                  "food", "personal_items", "door_open", "no_client_id_check")
+                  "food", "personal_items", "door_open")
 # recall-first mode: a missed violation costs more than a false alarm (case FAQ), so weaker
 # signals are reported too, marked level="review"; CASHGUARD_REVIEW=0 keeps only confirmed
 REVIEW = os.environ.get("CASHGUARD_REVIEW", "1") != "0"
@@ -164,6 +164,7 @@ def rule_departures(f: Features) -> list[Candidate]:
         periodic = {k: f.vwin(k, t0, t1) for k in ("cash_on_desk", "bag_on_desk",
                                                    "docs_on_desk", "safe_open")}
         ev = [d.t_depart, last]
+        win = [d.t_depart, d.t_back]  # exposure window: the cashier is away
         items = [k for k in ("cash_on_desk", "bag_on_desk", "docs_on_desk")
                  if periodic[k] >= TH["valuables"]]
         if f.probe is not None:
@@ -182,13 +183,13 @@ def rule_departures(f: Features) -> list[Candidate]:
             score = max([periodic[k] for k in items] or [0.0])
         if left:
             out.append(Candidate("valuables_unattended", d.t_depart, score, ev,
-                                 {"items": items, "t_exit": d.t_exit}))
+                                 {"items": items, "t_exit": d.t_exit, "window": win}))
         safe_open = periodic["safe_open"] >= TH["safe_open"]
         if safe_open and f.probe is not None:
             safe_open = f.probe("safe_open", probe_t) >= TH["safe_open"]
         if safe_open:
             out.append(Candidate("safe_open", d.t_depart, periodic["safe_open"], ev,
-                                 {"t_exit": d.t_exit, "while": "left"}))
+                                 {"t_exit": d.t_exit, "while": "left", "window": win}))
         elif f.probe is not None:
             key_t = sorted({round(min(d.t_exit + k * 0.7, last), 2) for k in (1, 2, 3, 4)})
             # a key must be seen on at least two frames (single dark-frame spikes, Х-12)
@@ -196,7 +197,7 @@ def rule_departures(f: Features) -> list[Candidate]:
             p_key = vals[1] if len(vals) > 1 else 0.0
             if p_key >= TH["key_in_lock"]:
                 out.append(Candidate("key_in_safe", d.t_depart, p_key, ev,
-                                     {"t_exit": d.t_exit}))
+                                     {"t_exit": d.t_exit, "window": win}))
         # screen left unlocked: the VLM reads the zoomed laptop screen (open program vs lock
         # screen / wallpaper / off), two frames needed (E022). The pixel colour heuristic is
         # only a fallback when the laptop cannot be located at all.
@@ -211,7 +212,7 @@ def rule_departures(f: Features) -> list[Candidate]:
             out.append(Candidate("screen_unlocked", d.t_depart,
                                  max(p_app, min(1.0, 0.5 + (scr or 0.0))), ev,
                                  {"t_exit": d.t_exit, "screen": round(scr or 0.0, 3),
-                                  "screen_vlm": round(p_app, 3)}))
+                                  "screen_vlm": round(p_app, 3), "window": win}))
     return out
 
 
@@ -239,8 +240,9 @@ def rule_safe_open_seated(f: Features) -> list[Candidate]:
             t = seated_times[0]
             if f.probe is not None and f.probe("safe_open", seated_times[:2]) < TH["safe_open"]:
                 continue
+            end = f.duration if reaches_end else float(times[-1])
             out.append(Candidate("safe_open", t, float(f.v("safe_open")[a:b].max()),
-                                 [t, float(times[-1])], {"while": "seated"}))
+                                 [t, float(times[-1])], {"while": "seated", "window": [t, end]}))
     return out
 
 
@@ -263,7 +265,8 @@ def rule_periodic(f: Features) -> list[Candidate]:
             t = float(f.vlm_t[a])
             ev = [t] + ([float(f.vlm_t[(a + b) // 2])] if b - a > 2 else [])
             out.append(Candidate(code, t, float(np.sort(p[hits])[-2]), ev,
-                                 {"hits": len(hits), "span": [t, float(f.vlm_t[b - 1])]}))
+                                 {"hits": len(hits), "span": [t, float(f.vlm_t[b - 1])],
+                                  "window": [t, float(f.vlm_t[b - 1])]}))
     return out
 
 
@@ -454,8 +457,10 @@ def rule_stranger(f: Features) -> list[Candidate]:
         present = float(np.mean(tl.count[m] >= 2)) if m.any() else 0.0
         if total and standing / total >= 0.8 and present >= 0.7:
             t = round(e.t + 1.0, 2)
+            gone = np.where((tl.t > e.t) & (tl.count < 2))[0]
+            stay = float(tl.t[gone[0]]) if len(gone) else f.duration
             out.append(Candidate("stranger", t, standing / total, [t, round(t_end - 0.3, 2)],
-                                 {"t_enter": e.t}))
+                                 {"t_enter": e.t, "window": [e.t, stay]}))
     return out
 
 
@@ -491,6 +496,16 @@ def rule_client_id(f: Features) -> list[Candidate]:
     return out
 
 
+def _overlap(a, b) -> float:
+    """Share of the smaller box covered by the other one."""
+    w = min(a[2], b[2]) - max(a[0], b[0])
+    h = min(a[3], b[3]) - max(a[1], b[1])
+    if w <= 0 or h <= 0:
+        return 0.0
+    small = min((a[2] - a[0]) * (a[3] - a[1]), (b[2] - b[0]) * (b[3] - b[1]))
+    return w * h / max(small, 1e-6)
+
+
 def rule_door(f: Features) -> list[Candidate]:
     """Entrance door left open: the door region (found by grounding) differs from its look at
     the start of the video over the whole second half (a door opened for a visitor and
@@ -498,6 +513,13 @@ def rule_door(f: Features) -> list[Candidate]:
     door_change = getattr(f.probe, "door_change", None)
     if door_change is None or f.duration < 6.0:
         return []
+    # grounding may return the safe, the desk or the laptop for "door" on another camera
+    door = f.probe.door_box(0.5) if f.probe.vlm is not None else f.probe._door_box
+    if not isinstance(door, list):
+        return []
+    for other in (f.probe._safe_box, f.probe._desk_box, f.probe._laptop_box):
+        if isinstance(other, list) and _overlap(door, other) > 0.3:
+            return []
     ts = [round(float(t), 2) for t in np.linspace(0.3, f.duration - 0.2, 14)]
     people = []
     for t in ts:
@@ -510,10 +532,19 @@ def rule_door(f: Features) -> list[Candidate]:
     k = len(v)
     while k > 0 and (np.isnan(v[k - 1]) or v[k - 1] >= TH["door_change"]):
         k -= 1
+    # direction: the same change happens when a door open at the start gets closed; the VLM
+    # is unreliable on a glass door in absolute terms (E031) but compares states of the same
+    # door within one video: "open" must be more likely after the change than before it
+    if f.probe is not None:
+        before = [f.probe("door_ajar", [t]) for t in ts[:min(k + 1, 3)]]
+        after = [f.probe("door_ajar", [t]) for t in ts[-3:]]
+        if np.mean(after) <= np.mean(before):
+            return []
     # opened at ts[k + 1]; the event = the door is still not closed 3 s later
     t = round(min(f.duration - 0.1, ts[k + 1] + 3.0), 2)
     return [Candidate("door_open", t, float(np.nanmin(tail)), [ts[0], t, ts[-1]],
-                      {"t_open": ts[k + 1]}, level="review")]
+                      {"t_open": ts[k + 1], "window": [ts[k + 1], f.duration]},
+                      level="review")]
 
 
 # rule_client_id is off by default: the VLM answers "ID" and "cash" for the same object in

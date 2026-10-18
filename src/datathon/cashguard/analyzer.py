@@ -39,7 +39,7 @@ class Analyzer:
         log.info("models loaded on %s in %.1fs", self.device, time.time() - t0)
 
     # ---------------- signals ----------------
-    def scan(self, path: Path, progress=None) -> Features:
+    def scan(self, path: Path, progress=None, vlm_fps: float | None = None) -> Features:
         def report(stage: str, frac: float):
             if progress is not None:
                 progress(stage, round(min(1.0, max(0.0, frac)), 3))
@@ -50,7 +50,8 @@ class Analyzer:
         vlm_t, vlm_imgs = [], []
         buf_t, buf_f = [], []
         next_vlm = 0.0
-        vlm_step = 1.0 / (VLM_FPS_LONG if info.duration_sec > 90 else VLM_FPS)
+        fps = VLM_FPS_LONG if info.duration_sec > 90 else VLM_FPS
+        vlm_step = 1.0 / min(fps, vlm_fps or fps)
 
         def flush():
             d = self.det(buf_f)
@@ -97,10 +98,15 @@ class Analyzer:
         f.probe, f.probe_series = ver, ver.series
         return f
 
-    def __call__(self, path: Path, progress=None) -> dict:
+    def __call__(self, path: Path, progress=None, waited: float = 0.0) -> dict:
         with self.lock:
             t0 = time.time()
-            f = self.scan(path, progress)
+            # a job that waited in a queue gets fewer scene frames so it still fits 5 minutes
+            # (0.4 fps was validated on long videos; 10 long videos at once took 312 s at 0.5)
+            fps = 0.33 if waited >= 140 else 0.4 if waited >= 60 else None
+            if fps:
+                log.info("%s waited %.0fs in the queue: scene fps %.2f", path.name, waited, fps)
+            f = self.scan(path, progress, vlm_fps=fps)
             t1 = time.time()
             if progress is not None:
                 progress("checks", 0.0)

@@ -199,6 +199,12 @@ h2.sec{font-size:30px;line-height:1.15;font-weight:800;letter-spacing:-.02em;mar
 .lvl.r{background:#fff4e0;color:var(--warn)}
 .pin.r{background:repeating-linear-gradient(to bottom,var(--warn) 0 5px,transparent 5px 9px)}
 .pin.r b{background:var(--warn)}
+.expo{display:flex;gap:12px;align-items:center;background:#fff7f8;border:1px solid #f6d5db;border-radius:var(--r-md);padding:12px 14px;margin:14px 0 0}
+.expo b{font-size:26px;line-height:1;color:var(--brand);font-weight:800;white-space:nowrap}
+.expo span{font-size:13.5px;color:var(--muted);line-height:1.35}
+.ba{margin-top:14px}
+.ba img{display:block;width:100%;max-width:660px;border-radius:12px;border:1px solid var(--line)}
+.ba .cap{display:flex;justify-content:space-between;max-width:660px;font-size:12px;color:var(--muted);font-weight:700;margin:6px 2px 0;gap:8px}
 .conf{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);font-weight:600}
 .conf .g{width:64px;height:6px;border-radius:99px;background:var(--line);overflow:hidden}
 .conf .g i{display:block;height:100%;background:var(--brand);border-radius:99px}
@@ -680,6 +686,11 @@ function render(j) {
 }
 function marks(f) { return (f.marks || []).map(m => { const [x1, y1, x2, y2] = m.box;
   return `<div class="mark ${m.kind === "object" ? "object" : ""}" style="left:${x1 * 100}%;top:${y1 * 100}%;width:${(x2 - x1) * 100}%;height:${(y2 - y1) * 100}%"><i>${esc(m.label)}</i></div>`; }).join(""); }
+function expo(e) {
+  if (!e || !(e.seconds > 0)) return "";
+  const who = e.max_people === 0 ? "в помещении никого не было" : e.max_people === 1 ? "в помещении был один человек" : `в помещении было до ${e.max_people} человек`;
+  return `<div class="expo"><b class="tnum">${Math.round(e.seconds)} с</b><span>окно уязвимости: с ${fmt(e.from_sec)} по ${fmt(e.to_sec)}${e.until_end ? " (до конца записи)" : ""}; ${who}</span></div>`;
+}
 function eventCard(x, i) {
   const s = split(x.description || ""), c = x.confidence != null ? Math.round(x.confidence * 100) : null, r = x.rule || {};
   const shots = (x.evidence_frames || []).map((f, k) => `<div class="shot" data-i="${i}" data-k="${k}"><img loading="lazy" src="data:image/jpeg;base64,${f.image_base64}" alt="Кадр ${fmt(f.timestamp_sec)}">${marks(f)}<span class="t">${fmt(f.timestamp_sec)}</span></div>`).join("");
@@ -689,6 +700,9 @@ function eventCard(x, i) {
       ${x.level === "review" ? `<span class="lvl r" title="Слабый сигнал: выдаётся, чтобы не пропустить нарушение">Требует проверки</span>` : `<span class="lvl c">Подтверждено</span>`}
       ${c != null ? `<span class="conf">уверенность <span class="g"><i style="width:${c}%"></i></span>${c}%</span>` : ""}</div></div></div>
     <div class="gal">${shots}</div>
+    ${expo(x.exposure)}
+    ${x.before_after ? `<div class="fld ba"><div class="k">До и после · эталон — начало этой же записи</div><img loading="lazy" src="data:image/jpeg;base64,${x.before_after.image_base64}" alt="До и после">
+      <div class="cap"><span>${fmt(x.before_after.t_before)} · как было</span><span>красным — что изменилось</span><span>${fmt(x.before_after.t_after)} · как стало</span></div></div>` : ""}
     <div class="fld"><div class="k">Что видно</div><p>${esc(s.obs.replace(/^Слабый сигнал, требует проверки\. /, ""))}</p></div>
     ${s.why ? `<div class="fld"><div class="k">Почему это важно</div><p class="m">${esc(cap(s.why))}.</p></div>` : ""}
     ${r.title ? `<details class="law"><summary><span class="ic">${icon("law", 16)}</span><span>${esc(longName(r.title))}, ${esc(r.clause)}</span>

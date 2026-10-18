@@ -29,10 +29,10 @@ class AnalyzerPool:
         for a in analyzers:
             self.free.put(a)
 
-    def __call__(self, path: Path, progress=None) -> dict:
+    def __call__(self, path: Path, progress=None, waited: float = 0.0) -> dict:
         a = self.free.get()
         try:
-            return a(path, progress=progress)
+            return a(path, progress=progress, waited=waited)
         finally:
             self.free.put(a)
 
