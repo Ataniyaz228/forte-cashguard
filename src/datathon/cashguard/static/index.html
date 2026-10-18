@@ -203,8 +203,8 @@ h2.sec{font-size:30px;line-height:1.15;font-weight:800;letter-spacing:-.02em;mar
 .expo b{font-size:26px;line-height:1;color:var(--brand);font-weight:800;white-space:nowrap}
 .expo span{font-size:13.5px;color:var(--muted);line-height:1.35}
 .ba{margin-top:14px}
-.ba img{display:block;width:100%;max-width:660px;border-radius:12px;border:1px solid var(--line)}
-.ba .cap{display:flex;justify-content:space-between;max-width:660px;font-size:12px;color:var(--muted);font-weight:700;margin:6px 2px 0;gap:8px}
+.ba img{display:block;width:100%;max-width:520px;border-radius:12px;border:1px solid var(--line)}
+.ba .cap{display:flex;justify-content:space-between;max-width:520px;font-size:12px;color:var(--muted);font-weight:700;margin:6px 2px 0;gap:8px}
 .conf{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);font-weight:600}
 .conf .g{width:64px;height:6px;border-radius:99px;background:var(--line);overflow:hidden}
 .conf .g i{display:block;height:100%;background:var(--brand);border-radius:99px}
@@ -443,6 +443,7 @@ body{background:#fff}
 .stat2 b,.stat2 span{position:relative;z-index:1;display:block;max-width:68%}
 .s3d{position:absolute;right:-8px;bottom:-10px;height:92px;width:auto;pointer-events:none;transition:transform .3s}
 .s3d-f{height:58px;right:14px;bottom:14px;border-radius:14px;box-shadow:0 10px 22px -10px rgba(74,2,33,.6)}
+.s3d-v{height:96px;right:12px;bottom:6px}
 .stat2:hover .s3d{transform:translateY(-4px) rotate(-3deg)}
 .pcard{position:relative;overflow:hidden}
 .pcard-art{position:absolute;right:-10px;top:-6px;height:130px;opacity:.95;pointer-events:none}
@@ -483,9 +484,8 @@ body{background:#fff}
     <div class="bento">
       <!-- hero: headline + upload -->
       <div class="panel p-main reveal">
-        <span class="tag"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/></svg>Кейс ForteBank · кассовая дисциплина</span>
-        <h1>Видео кассы <em>→</em> нарушения с&nbsp;доказательствами</h1>
-        <p class="lead">Загрузите запись с камеры. Сервис найдёт видимые признаки нарушений и покажет момент, кадры и пункт правил НБРК — проверяющему остаётся подтвердить.</p>
+        <h1>Нарушения на&nbsp;записи кассы — за&nbsp;минуту</h1>
+        <p class="lead">Загрузите видео с камеры. Покажем момент, кадры и пункт правил НБРК.</p>
         <div class="upl">
           <label class="dz2" id="drop">
             <input type="file" id="file" accept=".mov,.mp4,video/quicktime,video/*">
@@ -494,21 +494,20 @@ body{background:#fff}
           </label>
           <button class="btn btn-white" id="go" disabled>Проверить →</button>
         </div>
-        <div class="fine"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex:none;margin-top:1px"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>Результат — подсказка для проверяющего, а не юридическое заключение. Звук и лица не анализируются.</div>
+        <div class="fine"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex:none;margin-top:1px"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>Решение принимает проверяющий. Звук и лица не анализируются.</div>
       </div>
       <!-- art: Forte 3D safe + product toasts -->
       <div class="panel p-art reveal" style="animation-delay:.1s" aria-hidden="true">
         <img class="safe" src="/static/brand/safe.webp" alt="">
         <div class="toast t1"><i>!</i><div>Сейф оставлен открытым<small>событие · 0:06.0</small></div></div>
         <div class="toast t2"><i>§</i><div>НБРК № 231, п. 20<small>основание</small></div></div>
-        <div class="toast t3"><i>✓</i><div>Кадры-доказательства<small>3 кадра · рамки объектов</small></div></div>
       </div>
     </div>
     <div class="statrow">
-      <div class="stat2 reveal" style="animation-delay:.15s"><b>0 байт</b><span>видео уходит в облачные AI-сервисы</span><img class="s3d s3d-f" src="/static/brand/forte-app.svg" alt=""></div>
-      <div class="stat2 reveal" style="animation-delay:.2s"><b id="nTypes">10</b><span>типов нарушений с пунктами норм РК</span><img class="s3d" src="/static/brand/percent.webp" alt=""></div>
-      <div class="stat2 reveal" style="animation-delay:.25s"><b>≤ 5 мин</b><span>на видео даже при пачке запросов</span><img class="s3d" src="/static/brand/magnifier.webp" alt=""></div>
-      <div class="stat2 reveal" style="animation-delay:.3s"><b>1–3</b><span>кадра-доказательства на событие</span><img class="s3d" src="/static/brand/chat.webp" alt=""></div>
+      <div class="stat2 reveal" style="animation-delay:.15s"><b>0 байт</b><span>видео уходит в облако — модели локальные</span><img class="s3d s3d-v" src="/static/brand/vault.webp" alt=""></div>
+      <div class="stat2 reveal" style="animation-delay:.2s"><b id="nTypes">10</b><span>типов нарушений с нормами РК</span><img class="s3d s3d-f" src="/static/brand/doc.webp" alt=""></div>
+      <div class="stat2 reveal" style="animation-delay:.25s"><b>≤ 5 мин</b><span>на одно видео</span><img class="s3d" src="/static/brand/clock.webp" alt=""></div>
+      <div class="stat2 reveal" style="animation-delay:.3s"><b>1–3</b><span>кадра и «до / после» на событие</span><img class="s3d" src="/static/brand/magnifier.webp" alt=""></div>
     </div>
   </div>
 
@@ -517,7 +516,7 @@ body{background:#fff}
       <div class="in">
         <img src="/static/brand/forte-logo-white.svg" alt="ForteBank">
         <h3>Решение остаётся за человеком</h3>
-        <p>CashGuard экономит часы просмотра записей: проверяющий сразу видит момент, кадр и норму — и сам принимает решение.</p>
+        <p>Вместо часов просмотра — сразу нужный момент, кадр и норма.</p>
       </div>
     </div>
   </div>
@@ -528,7 +527,7 @@ body{background:#fff}
   <div class="wrap proc">
     <div class="player"><video id="pv" muted playsinline loop></video><div class="scan"></div>
       <div class="badge"><i></i>Анализ записи</div><div class="tc-now tnum" id="pvClock">0:00.0</div></div>
-    <div class="card pcard"><img class="pcard-art" src="/static/brand/magnifier.webp" alt="">
+    <div class="card pcard"><img class="pcard-art" src="/static/brand/clock.webp" alt="">
       <div class="eyebrow">Проверка выполняется</div>
       <h2>Анализируем видео</h2>
       <div class="elapsed tnum" id="timer">Прошло 0 с</div>
@@ -553,7 +552,7 @@ body{background:#fff}
           <div class="tlhead"><span><i style="background:#e7a3c0"></i>Люди в кадре</span><span><i style="background:var(--brand)"></i>Событие</span><span class="sp"></span><span class="tnum" id="durLbl"></span></div>
           <div class="track" id="track"><div class="thumbs" id="thumbs"></div><div class="people" id="people"></div><div class="ruler" id="ruler"></div><div class="playhead" id="ph"></div></div>
         </div>
-        <div class="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex:none;margin-top:2px"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>Нажмите на метку на шкале или на таймкод события, чтобы перейти к моменту записи.</div>
+        <div class="note">Метка на шкале или таймкод — переход к моменту записи.</div>
       </div>
       <!-- 9. EVENTS -->
       <div>
@@ -566,7 +565,7 @@ body{background:#fff}
 </main>
 
 <!-- 10. FOOTER -->
-<footer><div class="wrap"><span>CashGuard · проект команды для кейса ForteBank, Datathon ’26<br><span class="legal">Логотип и 3D-иллюстрации — ForteBank, используются в рамках кейса хакатона. Сервис не является официальным продуктом банка.</span></span><span>Основания: Постановления Правления НБРК № 231 (29.11.2019) и № 14 (24.02.2020)</span></div></footer>
+<footer><div class="wrap"><span>CashGuard · Datathon ’26, кейс ForteBank<br><span class="legal">Логотип и иллюстрации — ForteBank, используются в рамках хакатона; сервис не является продуктом банка.</span></span></div></footer>
 <div class="mbar" id="mbar"><button class="btn btn-primary" id="mgo" disabled>Проверить видео →</button></div>
 <div class="tip" id="tip"></div>
 <div class="lb" id="lb"><button class="nav prev" id="lbPrev" aria-label="Предыдущий кадр">‹</button><div class="box"><div style="position:relative" id="lbBox"></div><div class="cap" id="lbCap"></div></div><button class="nav next" id="lbNext" aria-label="Следующий кадр">›</button></div>
@@ -670,12 +669,12 @@ function render(j) {
     ? '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h.01"/></svg>'
     : '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg>'}</div>
     <div><h2>${bad ? "Обнаружены признаки возможных нарушений" : "Нарушение не обнаружено"}</h2>
-    <p>${bad ? "Проверьте каждое событие по кадрам и записи — решение остаётся за проверяющим." : "По поддерживаемым типам событий признаков не найдено."}</p></div>
+    <p>${bad ? "Проверьте каждое событие по кадрам и записи." : "По поддерживаемым типам событий признаков не найдено."}</p></div>
     <div class="kpis"><div class="kpi"><b class="tnum">${v.length}</b><span>${plural(v.length, "событие", "события", "событий")}</span></div>
     <div class="kpi"><b class="tnum">${fmt(dur)}</b><span>длительность</span></div><div class="kpi"><b class="tnum">${Math.round(j.processing_time_sec ?? 0)} с</b><span>анализ</span></div></div>`;
   $("events").innerHTML = bad ? v.map(eventCard).join("") :
     `<div class="card clean"><img class="clean-art" src="/static/brand/safe.webp" alt=""><div class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></div>
-     <div><h3>Запись просмотрена целиком</h3><p>Люди, сейф, стол, ноутбук, приход и уход посетителей — событий для проверки нет. Отсутствие срабатывания не гарантирует отсутствие нарушений других типов.</p></div></div>`;
+     <div><h3>Запись просмотрена целиком</h3><p>Люди, сейф, стол, ноутбук, дверь, посетители — событий для проверки нет.</p></div></div>`;
   $("durLbl").textContent = fmt(dur);
   const mon = $("rmon"); mon.querySelectorAll("img.still").forEach(e => e.remove()); $("rv").classList.toggle("hidden", !file);
   if (!file) { const f0 = v[0]?.evidence_frames?.[0]; if (f0) mon.insertAdjacentHTML("afterbegin", `<img class="still" src="data:image/jpeg;base64,${f0.image_base64}" alt="">`);
@@ -688,8 +687,8 @@ function marks(f) { return (f.marks || []).map(m => { const [x1, y1, x2, y2] = m
   return `<div class="mark ${m.kind === "object" ? "object" : ""}" style="left:${x1 * 100}%;top:${y1 * 100}%;width:${(x2 - x1) * 100}%;height:${(y2 - y1) * 100}%"><i>${esc(m.label)}</i></div>`; }).join(""); }
 function expo(e) {
   if (!e || !(e.seconds > 0)) return "";
-  const who = e.max_people === 0 ? "в помещении никого не было" : e.max_people === 1 ? "в помещении был один человек" : `в помещении было до ${e.max_people} человек`;
-  return `<div class="expo"><b class="tnum">${Math.round(e.seconds)} с</b><span>окно уязвимости: с ${fmt(e.from_sec)} по ${fmt(e.to_sec)}${e.until_end ? " (до конца записи)" : ""}; ${who}</span></div>`;
+  const who = e.max_people === 0 ? "в помещении никого" : e.max_people === 1 ? "в помещении 1 человек" : `в помещении до ${e.max_people} человек`;
+  return `<div class="expo"><b class="tnum">${Math.round(e.seconds)} с</b><span>окно уязвимости · ${fmt(e.from_sec)}–${e.until_end ? "конец записи" : fmt(e.to_sec)} · ${who}</span></div>`;
 }
 function eventCard(x, i) {
   const s = split(x.description || ""), c = x.confidence != null ? Math.round(x.confidence * 100) : null, r = x.rule || {};
@@ -698,10 +697,10 @@ function eventCard(x, i) {
     <div class="ev-h"><div class="ev-n">${i + 1}</div><div style="min-width:0"><h3>${esc(x.type)}</h3>
       <div class="meta"><button class="tcb" data-i="${i}">▶ ${fmt(x.timecode_sec)}</button>
       ${x.level === "review" ? `<span class="lvl r" title="Слабый сигнал: выдаётся, чтобы не пропустить нарушение">Требует проверки</span>` : `<span class="lvl c">Подтверждено</span>`}
-      ${c != null ? `<span class="conf">уверенность <span class="g"><i style="width:${c}%"></i></span>${c}%</span>` : ""}</div></div></div>
+</div></div></div>
     <div class="gal">${shots}</div>
     ${expo(x.exposure)}
-    ${x.before_after ? `<div class="fld ba"><div class="k">До и после · эталон — начало этой же записи</div><img loading="lazy" src="data:image/jpeg;base64,${x.before_after.image_base64}" alt="До и после">
+    ${x.before_after ? `<div class="fld ba"><div class="k">До и после</div><img loading="lazy" src="data:image/jpeg;base64,${x.before_after.image_base64}" alt="До и после">
       <div class="cap"><span>${fmt(x.before_after.t_before)} · как было</span><span>красным — что изменилось</span><span>${fmt(x.before_after.t_after)} · как стало</span></div></div>` : ""}
     <div class="fld"><div class="k">Что видно</div><p>${esc(s.obs.replace(/^Слабый сигнал, требует проверки\. /, ""))}</p></div>
     ${s.why ? `<div class="fld"><div class="k">Почему это важно</div><p class="m">${esc(cap(s.why))}.</p></div>` : ""}
