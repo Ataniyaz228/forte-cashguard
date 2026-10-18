@@ -45,13 +45,18 @@ TH = {
     "det_support_min": 3,      # detector frames with cup/bottle or handbag/backpack
     "stranger_sec": 5.0,       # newcomer keeps standing this long (or until the video ends)
     "recount_min_sec": 10.0,  # opened bag must be recounted at least this long
+    # "review" level (recall-first mode): weaker signals reported as "требует проверки"
+    "door_change": 0.17,       # door region vs the start: violations >=0.45, normals <=0.10
 }
 
 
 # types the active rules can report (UI catalogue, docs); the rest are documented limits
 REPORTED_TYPES = ("safe_open", "key_in_safe", "valuables_unattended", "screen_unlocked",
                   "cash_exposed_next_client", "no_courier_check", "no_recount", "stranger",
-                  "food", "personal_items")
+                  "food", "personal_items", "door_open", "no_client_id_check")
+# recall-first mode: a missed violation costs more than a false alarm (case FAQ), so weaker
+# signals are reported too, marked level="review"; CASHGUARD_REVIEW=0 keeps only confirmed
+REVIEW = os.environ.get("CASHGUARD_REVIEW", "1") != "0"
 
 
 @dataclass
@@ -61,6 +66,7 @@ class Candidate:
     score: float
     evidence_t: list[float]
     facts: dict = field(default_factory=dict)
+    level: str = "confirmed"  # "confirmed" | "review" (weaker signal, needs a human look)
 
 
 @dataclass
@@ -480,20 +486,48 @@ def rule_client_id(f: Features) -> list[Candidate]:
             out.append(Candidate("no_client_id_check", t, float(cash[k]),
                                  [t, ts[min(k + 2, len(ts) - 1)]],
                                  {"t_enter": e.t,
-                                  "t_id": ts[int(later[0])] if len(later) else None}))
+                                  "t_id": ts[int(later[0])] if len(later) else None},
+                                 level="review"))
     return out
 
 
-# rule_client_id is kept but not active: the 2B VLM answers "ID shown" for any object in
-# the cashier's hands (cash, phone), so the ID-before-cash order is not observable (E011).
-ALL_RULES = ([rule_client_id] if os.environ.get("CASHGUARD_CLIENT_ID_RULE") == "1" else []) + [
-    rule_stranger, rule_departures, rule_safe_open_seated, rule_periodic, rule_client_flow,
-    rule_cash_bag]
+def rule_door(f: Features) -> list[Candidate]:
+    """Entrance door left open: the door region (found by grounding) differs from its look at
+    the start of the video over the whole second half (a door opened for a visitor and
+    closed again returns to the start look). Training: violations 0.45-0.48, normals <=0.10."""
+    door_change = getattr(f.probe, "door_change", None)
+    if door_change is None or f.duration < 6.0:
+        return []
+    ts = [round(float(t), 2) for t in np.linspace(0.3, f.duration - 0.2, 14)]
+    people = []
+    for t in ts:
+        i = int(np.argmin(np.abs(f.det_t - t)))
+        people.append([d[2] for d in f.dets[i] if d[0] == "person" and d[1] >= 0.3])
+    v = np.array([np.nan if x is None else x for x in door_change(ts, people)], float)
+    tail = v[len(v) // 2:]
+    if np.isnan(tail).all() or np.nanmin(tail) < TH["door_change"]:
+        return []
+    k = len(v)
+    while k > 0 and (np.isnan(v[k - 1]) or v[k - 1] >= TH["door_change"]):
+        k -= 1
+    # opened at ts[k + 1]; the event = the door is still not closed 3 s later
+    t = round(min(f.duration - 0.1, ts[k + 1] + 3.0), 2)
+    return [Candidate("door_open", t, float(np.nanmin(tail)), [ts[0], t, ts[-1]],
+                      {"t_open": ts[k + 1]}, level="review")]
+
+
+# rule_client_id is off by default: the VLM answers "ID" and "cash" for the same object in
+# a hand (X-2 vs the normal Х-3); as a review rule it hit only Х-34 (wrong type) and raised
+# 5 false alarms on 8 distorted copies of the normal Х-39 (E031)
+ALL_RULES = [rule_stranger, rule_departures, rule_safe_open_seated, rule_periodic,
+             rule_client_flow, rule_cash_bag]
+REVIEW_RULES = [rule_door] + (
+    [rule_client_id] if os.environ.get("CASHGUARD_CLIENT_ID_RULE") == "1" else [])
 
 
 def run_rules(f: Features) -> list[Candidate]:
     cands = []
-    for r in ALL_RULES:
+    for r in ALL_RULES + (REVIEW_RULES if REVIEW else []):
         cands.extend(r(f))
     return merge(cands)
 
@@ -506,6 +540,8 @@ def merge(cands: list[Candidate], gap: float = 4.0) -> list[Candidate]:
         if out and out[-1].code == c.code and c.t - out[-1].t <= gap:
             # same event seen again: keep the earliest moment (when it becomes visible)
             out[-1].score = max(out[-1].score, c.score)
+            if c.level == "confirmed":
+                out[-1].level = "confirmed"
             continue
         out.append(c)
     return sorted(out, key=lambda c: c.t)

@@ -8,7 +8,8 @@ import json
 import re
 from pathlib import Path
 
-from PIL import Image
+import numpy as np
+from PIL import Image, ImageFilter
 
 from .roi import apply_roi
 from .video import frames_at
@@ -22,6 +23,8 @@ PROBES = {
     "safe_open": "Is the door of this metal safe open?",
     "key_in_lock": "Is a key inserted in this lock?",
     "door_open": "Is the door of this room standing open?",
+    # zoomed crop of the entrance door found by grounding (full frame: no signal, E031)
+    "door_ajar": "Is the glass door open or ajar?",
     # same questions asked on a zoomed crop of the desk (robust to a farther camera)
     "desk_left": "Is anything lying on the desk besides the laptop, the desk phone and the "
                  "money counting machine (for example papers, a tablet, money, a bag or a "
@@ -41,13 +44,15 @@ PROBES = {
 }
 CROP = {"safe_open": "safe", "key_in_lock": "lock", "desk_left": "desk", "desk_cash": "desk",
         "desk_food": "desk", "desk_cash4": "desk_tiles",
-        "screen_app": "laptop"}
+        "screen_app": "laptop", "door_ajar": "door"}
 GROUND_Q = ('Locate the grey metal safe (cabinet) in the image and output its bbox '
             'coordinates in JSON format as [{"bbox_2d": [x1, y1, x2, y2], "label": "safe"}].')
 LAPTOP_Q = ('Locate the laptop screen in the image and output its bbox coordinates in JSON '
             'format as [{"bbox_2d": [x1, y1, x2, y2], "label": "laptop screen"}].')
 DESK_Q = ('Locate the wooden desk (work table) in the image and output its bbox coordinates '
           'in JSON format as [{"bbox_2d": [x1, y1, x2, y2], "label": "desk"}].')
+DOOR_Q = ('Locate the entrance door of the room and output its bbox coordinates in JSON '
+          'format as [{"bbox_2d": [x1, y1, x2, y2], "label": "door"}].')
 LOCK_Q = ('Locate the lock (keyhole) on the door of this safe and output its bbox coordinates '
           'in JSON format as [{"bbox_2d": [x1, y1, x2, y2], "label": "lock"}].')
 BOX_RE = re.compile(r"\[\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\]")
@@ -108,6 +113,7 @@ class Verifier:
         self._lock_box = self.cache.get("_lock_box", "unset")
         self._desk_box = self.cache.get("_desk_box", "unset")
         self._laptop_box = self.cache.get("_laptop_box", "unset")
+        self._door_box = self.cache.get("_door_box", "unset")
 
     def _save(self):
         if self.cache_file:
@@ -156,6 +162,59 @@ class Verifier:
         self.cache["_laptop_box"] = box
         self._save()
         return box
+
+    def door_box(self, t_hint: float):
+        """Entrance door found by grounding once per video (None if not visible)."""
+        if self._door_box != "unset":
+            return self._door_box
+        img = frames_at(self.path, [t_hint])[t_hint]
+        box = _rel_box(self.vlm.describe(img, DOOR_Q, 80), *img.size)
+        if box is not None:
+            area = (box[2] - box[0]) * (box[3] - box[1]) / (img.width * img.height)
+            if area < 0.01 or area > 0.7:
+                box = None
+        self._door_box = box
+        self.cache["_door_box"] = box
+        self._save()
+        return box
+
+    def door_change(self, times: list[float], people: list[list]) -> list[float]:
+        """Change of the door region against the first time (door closed at the start),
+        minus the change of the rest of the frame (lighting); people boxes are masked out.
+        Pixel comparison: the VLM cannot tell an open glass door from a closed one (E031)."""
+        times = [round(t, 2) for t in times]
+        keys = [f"door_diff@{t}" for t in times[1:]]
+        if all(k in self.cache for k in keys):
+            return [self.cache[k] for k in keys]
+        box = self.door_box(0.5) if self.vlm is not None else self._door_box
+        if not isinstance(box, list):
+            return [0.0] * len(keys)
+        fr = frames_at(self.path, times)
+        w0 = 200
+        s = w0 / fr[times[0]].width
+
+        def gray(im):
+            g = im.convert("L").resize((w0, max(1, int(im.height * s))))
+            return np.asarray(g.filter(ImageFilter.GaussianBlur(1.5)), float)
+
+        ref = gray(fr[times[0]])
+        door = np.zeros_like(ref, bool)
+        x0, y0, x1, y1 = (int(c * s) for c in box)
+        door[y0:y1, x0:x1] = True
+        for k, t, boxes in zip(keys, times[1:], people[1:]):
+            d = np.abs(gray(fr[t]) - ref) > 20
+            free = np.ones_like(d)
+            for b in boxes:
+                q = [int(c * s) for c in b]
+                free[max(0, q[1] - 4):q[3] + 4, max(0, q[0] - 4):q[2] + 4] = False
+            md, mr = door & free, ~door & free
+            if md.sum() < 100:
+                self.cache[k] = None
+                continue
+            rest = float(d[mr].mean()) if mr.sum() > 100 else 0.0
+            self.cache[k] = round(max(0.0, float(d[md].mean()) - rest), 4)
+        self._save()
+        return [self.cache[k] for k in keys]
 
     def lock_box(self, img: Image.Image, safe):
         """Lock position found inside the zoomed safe crop (adapts to any camera angle)."""
@@ -225,6 +284,12 @@ class Verifier:
                         self.cache[f"{name}@{t}"] = 0.0
                         continue
                     img = _crop(img, box, pad=0.15, size=448)
+                elif kind == "door":
+                    box = self.door_box(0.5)
+                    if box is None:
+                        self.cache[f"{name}@{t}"] = 0.0
+                        continue
+                    img = _crop(img, box, pad=0.1, size=640)
                 elif kind == "desk":
                     box = self.desk_box(t)
                     img = _crop(img, box, pad=0.12, size=640) if box else apply_roi(img, self.roi)

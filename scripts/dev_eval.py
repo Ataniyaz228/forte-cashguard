@@ -73,7 +73,9 @@ def main():
             best = min(pool, key=lambda c: min(abs(c.t - t) for t in a["tc"]))
         terr = min(abs(best.t - t) for t in a["tc"]) if best else None
         res.append({"video": v, "angle": a["angle"], "gt": gt, "pred": pred, "type": a["type"],
-                    "pred_types": [f"{c.code}@{c.t:.1f}({c.score:.2f})" for c in cands],
+                    "pred_strict": any(c.level == "confirmed" for c in cands),
+                    "pred_types": [f"{c.code}@{c.t:.1f}({c.score:.2f})"
+                                   + ("?" if c.level == "review" else "") for c in cands],
                     "type_ok": bool(best and best.code == a["type"]), "terr": terr})
     tp = sum(r["gt"] and r["pred"] for r in res)
     fn = sum(r["gt"] and not r["pred"] for r in res)
@@ -88,7 +90,16 @@ def main():
             print(f"{mark}{r['video']:5s} [{r['angle']}] gt={r['type'] or '-':26s} "
                   f"pred={r['pred_types']}")
     n = len(res)
-    print(f"\nvideos={n}  TP={tp} FN={fn} FP={fp} TN={tn}  acc={(tp + tn) / max(n, 1):.3f}")
+    print(f"\nvideos={n}  TP={tp} FN={fn} FP={fp} TN={tn}  acc={(tp + tn) / max(n, 1):.3f}"
+          f"  precision={tp / max(tp + fp, 1):.3f} recall={tp / max(tp + fn, 1):.3f}")
+    # confirmed-only operating point ("?" = review-level events, recall-first mode)
+    s_tp = sum(r["gt"] and r["pred_strict"] for r in res)
+    s_fp = sum(not r["gt"] and r["pred_strict"] for r in res)
+    s_fn = sum(r["gt"] for r in res) - s_tp
+    s_tn = sum(not r["gt"] for r in res) - s_fp
+    print(f"confirmed only: TP={s_tp} FN={s_fn} FP={s_fp} TN={s_tn}  "
+          f"acc={(s_tp + s_tn) / max(n, 1):.3f}  precision={s_tp / max(s_tp + s_fp, 1):.3f} "
+          f"recall={s_tp / max(s_tp + s_fn, 1):.3f}")
     print(f"type correct {type_ok}/{len(typed)} (known types)")
     if terrs:
         terrs.sort()

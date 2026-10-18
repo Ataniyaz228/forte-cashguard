@@ -78,6 +78,9 @@ def describe(c: Candidate) -> str:
                 if fx.get("t_prev_exit") is not None else "")
         obs = (f"{prev}в {fmt_t(t)} в кассу входит посетитель, а на столе открыто лежат "
                f"наличные.")
+    elif c.code == "door_open":
+        obs = (f"С {fmt_t(t)} и до конца записи дверь кассового помещения, по оценке модели, "
+               f"остаётся открытой.")
     elif c.code == "recount_without_client":
         obs = (f"В {fmt_t(t)} клиент выходит из кассы, а работа с наличными "
                f"(пересчёт) продолжается после его ухода.")
@@ -91,6 +94,8 @@ def describe(c: Candidate) -> str:
         obs = f"В {fmt_t(t)} зафиксировано событие типа «{TYPES[c.code].name}»."
     vt = TYPES[c.code]
     refs = "; ".join(f"{r.title}, {r.clause}" for r in vt.rules)
+    if c.level == "review":
+        obs = f"Слабый сигнал, требует проверки. {obs}"
     return (f"{obs} Почему это может быть нарушением: {vt.why}. Основание: {refs}. "
             f"Требуется проверка человеком.")
 
@@ -117,16 +122,21 @@ def render(path: Path, f: Features, cands: list[Candidate]) -> dict:
             # extra fields (ignored by strict parsers, used by the UI)
             "type_code": c.code,
             "confidence": round(float(c.score), 2),
+            # "confirmed" or "review": a weaker signal reported so that nothing is missed
+            "level": c.level,
             "rule": {"title": r0.title, "clause": r0.clause, "text": r0.text,
                      "url": r0.url},
             "rules": [{"title": r.title, "clause": r.clause, "url": r.url}
                       for r in vt.rules],
         })
     n = len(violations)
+    n_rev = sum(c.level == "review" for c in cands)
+    rev = f" (из них слабых сигналов «требует проверки»: {n_rev})" if n_rev else ""
     summary = ("Признаков нарушений по поддерживаемым типам не обнаружено. "
                "Отсутствие срабатывания не гарантирует отсутствие нарушений."
                if not n else
-               f"Найдено событий: {n}. Каждое требует проверки человеком по кадрам и видео.")
+               f"Найдено событий: {n}{rev}. Каждое требует проверки человеком по кадрам "
+               f"и видео.")
     return {"verdict": "violation" if n else "no_violation", "violations": violations,
             "summary": summary,
             "video": {"duration_sec": round(f.duration, 2), "width": f.width,
